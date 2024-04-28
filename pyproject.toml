@@ -1,0 +1,21 @@
+[project]
+name = "dependify"
+version = "0.0.1"
+authors = [
+  { name="Kenneth Ulloa", email="ulloakenth@gmail.com" },
+]
+description = "Dependency injection package"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/KennethUlloa/dependify"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

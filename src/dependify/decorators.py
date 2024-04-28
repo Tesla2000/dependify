@@ -1,8 +1,10 @@
 from functools import wraps
 from inspect import signature
-from container import Container
+from .container import Container
+
 
 _container = Container()
+
 
 def register(name, target=None, cached=False, autowire=True):
     """
@@ -16,7 +18,18 @@ def register(name, target=None, cached=False, autowire=True):
     """
     _container.register(name, target, cached, autowire)
 
-def get_dependencies(f):
+
+def set_container(container: Container):
+    """
+    Set the container to use for dependency injection.
+
+    Parameters:
+    container (Container): The container to use.
+    """
+    _container = container
+
+
+def get_dependencies(f, container: Container = _container):
     """
     Get the dependencies of a function.
 
@@ -29,23 +42,32 @@ def get_dependencies(f):
         if parameter.default != parameter.empty:
             continue
 
-        if parameter.annotation in _container.dependencies:
+        if parameter.annotation in container.dependencies:
             to_inject[name] = parameter.annotation
 
     return to_inject
     
 
-def inject(f):
+def inject(_func=None, *, container=_container):
     """
     Decorator to inject dependencies into a function.
-    """
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        for name, dependency in get_dependencies(f).items():
-            kwargs[name] = _container.resolve(dependency)
-        return f(*args, **kwargs)
 
-    return decorated
+    Parameters:
+        container (Container): the container used to inject the dependencies. Defaults to module container.
+    """
+    def decorated(func):
+        @wraps(func)
+        def subdecorator(*args, **kwargs):
+            for name, dependency in get_dependencies(func, container).items():
+                kwargs[name] = _container.resolve(dependency)
+            return func(*args, **kwargs)
+        return subdecorator
+    
+    if _func is None:
+        return decorated
+    
+    else:
+        return decorated(_func)
 
 
 def injectable(_func=None, *, patch=None, cached=False, autowire=True):
@@ -68,4 +90,3 @@ def injectable(_func=None, *, patch=None, cached=False, autowire=True):
         return decorator
     else:
         return decorator(_func)
-

@@ -1,6 +1,6 @@
 from inspect import signature
 from typing import Callable, Type
-from dependency import Dependency
+from .dependency import Dependency
 
 
 class Container:
