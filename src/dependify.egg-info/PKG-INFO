@@ -1,5 +1,18 @@
+Metadata-Version: 2.1
+Name: dependify
+Version: 0.0.1
+Summary: Dependency injection package
+Author-email: Kenneth Ulloa <ulloakenth@gmail.com>
+Project-URL: Homepage, https://github.com/KennethUlloa/dependify
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
 <div style="display: flex; justify-content: center">
-    <img src="https://raw.githubusercontent.com/KennethUlloa/dependify/0c03603fd4b2905d2d0749ed8e2cf6ed38b40543/images/dependify.svg" width="80%">
+    <img src="./images/dependify.svg" width="80%">
 </div>
 
 # Dependify
