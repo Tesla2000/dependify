@@ -67,7 +67,3 @@ class TestDependency(TestCase):
         result1 = dependency.resolve()
         result2 = dependency.resolve()
         self.assertIsNot(result1, result2)
-    
-
-if __name__ == '__main__':
-    unittest.main()

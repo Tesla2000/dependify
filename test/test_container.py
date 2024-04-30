@@ -1,19 +1,33 @@
-import unittest
 from unittest import TestCase
 from dependify import Container
 
 
 class TestContainer(TestCase):
 
-    def test_container_register(self):
+    def test_container_register_class(self):
         """
-        Test if a dependency can be registered successfully.
+        Test if a class dependency can be registered successfully.
         """
         class A:
             pass
 
         container = Container()
         container.register(A)
+        self.assertIn(A, container.dependencies)
+    
+    def test_container_register_function(self):
+        """
+        Test if a function based dependency can be registered successfully.
+        """
+        container = Container()
+        
+        class A():
+            pass
+        
+        def func():
+            return A()
+        
+        container.register(A, func)
         self.assertIn(A, container.dependencies)
     
     def test_container_resolve(self):
