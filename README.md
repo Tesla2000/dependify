@@ -1,5 +1,5 @@
 <div style="display: flex; justify-content: center">
-    <img src="https://raw.githubusercontent.com/KennethUlloa/dependify/0c03603fd4b2905d2d0749ed8e2cf6ed38b40543/images/dependify.svg" width="80%">
+    <img src="https://github.com/KennethUlloa/dependify/raw/main/images/dependify.svg" width="80%">
 </div>
 
 # Dependify
