@@ -32,4 +32,6 @@ C() # No need to pass in A and B since they are injected automatically
 
 from .dependency import Dependency
 from .container import Container
-from .decorators import inject, injectable, register, set_container
+from .decorators import inject, injectable
+from .context import register, register_dependency, resolve, has, dependencies
+

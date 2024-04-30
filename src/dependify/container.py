@@ -1,4 +1,5 @@
 from inspect import signature
+from types import MappingProxyType
 from typing import Callable, Type
 from .dependency import Dependency
 
@@ -21,7 +22,7 @@ class Container:
 
     """
 
-    dependencies: dict[Type, Dependency] = {}
+    __dependencies: dict[Type, Dependency] = {}
 
     def __init__(self, dependencies: dict[str, Dependency] = {}):
         """
@@ -30,7 +31,7 @@ class Container:
         Args:
             dependencies (dict[str, Dependency], optional): A dictionary of dependencies to be registered. Defaults to an empty dictionary.
         """
-        self.dependencies = dependencies
+        self.__dependencies = dependencies
 
     def register_dependency(self, name: Type, dependency: Dependency):
         """
@@ -40,7 +41,7 @@ class Container:
             name (Type): The name of the dependency.
             dependency (Dependency): The dependency to be registered.
         """
-        self.dependencies[name] = dependency
+        self.__dependencies[name] = dependency
 
     def register(self, name: Type, target: Type|Callable = None, cached: bool = False, autowired: bool = True):
         """
@@ -66,10 +67,10 @@ class Container:
         Returns:
             Any: The resolved dependency, or None if the dependency is not registered.
         """
-        if name not in self.dependencies:
+        if name not in self.__dependencies:
             return None
 
-        dependency = self.dependencies[name]
+        dependency = self.__dependencies[name]
 
         if not dependency.autowire:
             return dependency.resolve()
@@ -78,11 +79,28 @@ class Container:
         parameters = signature(dependency.target).parameters
 
         for name, parameter in parameters.items():
-            if parameter.annotation in self.dependencies:
+            if parameter.annotation in self.__dependencies:
                 kwargs[name] = self.resolve(parameter.annotation)
             
         return dependency.resolve(**kwargs)
 
+    def has(self, name: Type) -> bool:
+        """
+        Checks if the container has a dependency with the specified name.
+
+        Args:
+            name (Type): The name of the dependency.
+
+        Returns:
+            bool: True if the container has the dependency, False otherwise.
+        """
+        return name in self.__dependencies
+    
+    def dependencies(self) -> dict[Type, Dependency]:
+        """
+        Returns a read-only view of the container's dependencies.
+        """
+        return MappingProxyType(self.__dependencies)
 
             
         

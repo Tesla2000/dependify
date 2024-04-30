@@ -1,54 +1,29 @@
 from functools import wraps
 from inspect import signature
+from typing import Type
+
 from .container import Container
+from .context import container, register
 
 
-_container = Container()
-
-
-def register(name, target=None, cached=False, autowire=True):
+def __get_existing_annot(f, container: Container = container) -> dict[str, Type]:
     """
-    Register a dependency with the container.
-
-    Parameters:
-        name (Type): The type of the dependency.
-        target (Type|Callable): The target of the dependency.
-        cached (bool): Whether the dependency should be cached.
-        autowired (bool): Whether the dependency should be autowired.
+    Get the existing annotations in a function.
     """
-    _container.register(name, target, cached, autowire)
-
-
-def set_container(container: Container):
-    """
-    Set the container to use for dependency injection.
-
-    Parameters:
-    container (Container): The container to use.
-    """
-    _container = container
-
-
-def get_dependencies(f, container: Container = _container):
-    """
-    Get the dependencies of a function.
-
-    Parameters:
-    f (Callable): The function to get the dependencies of.
-    """
-    to_inject = {}
+    existing_annot = {}
     parameters = signature(f).parameters
+
     for name, parameter in parameters.items():
         if parameter.default != parameter.empty:
             continue
 
-        if parameter.annotation in container.dependencies:
-            to_inject[name] = parameter.annotation
+        if container.has(parameter.annotation):
+            existing_annot[name] = parameter.annotation
 
-    return to_inject
+    return existing_annot
     
 
-def inject(_func=None, *, container=_container):
+def inject(_func=None, *, container: Container = container):
     """
     Decorator to inject dependencies into a function.
 
@@ -58,8 +33,8 @@ def inject(_func=None, *, container=_container):
     def decorated(func):
         @wraps(func)
         def subdecorator(*args, **kwargs):
-            for name, dependency in get_dependencies(func, container).items():
-                kwargs[name] = _container.resolve(dependency)
+            for name, annotation in __get_existing_annot(func, container).items():
+                kwargs[name] = container.resolve(annotation)
             return func(*args, **kwargs)
         return subdecorator
     
@@ -90,3 +65,4 @@ def injectable(_func=None, *, patch=None, cached=False, autowire=True):
         return decorator
     else:
         return decorator(_func)
+
