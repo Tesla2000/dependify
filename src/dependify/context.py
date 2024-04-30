@@ -5,7 +5,7 @@ from .dependency import Dependency
 from .container import Container
 
 
-container = Container()
+_container = Container()
 
 
 # Shortcuts
@@ -13,29 +13,29 @@ def register(name: Type, target: Type|Callable = None, cached: bool = False, aut
     """
     Registers a dependency with the specified name and target.
     """
-    return container.register(name, target, cached, autowired)
+    return _container.register(name, target, cached, autowired)
 
 def register_dependency(name: Type, dependency: Dependency):
     """
     Registers a dependency with the specified name.
     """
-    return container.register_dependency(name, dependency)
+    return _container.register_dependency(name, dependency)
 
 def resolve(name: Type):
     """
     Resolves a dependency with the specified name.
     """
-    return container.resolve(name)
+    return _container.resolve(name)
 
 def has(name: Type):
     """
     Checks if a dependency with the specified name exists.
     """
-    return container.has(name)
+    return _container.has(name)
 
 def dependencies():
     """
     Returns the dependencies in the container.
     """
-    return container.dependencies()
+    return _container.dependencies()
 

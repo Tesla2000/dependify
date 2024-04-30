@@ -3,10 +3,10 @@ from inspect import signature
 from typing import Type
 
 from .container import Container
-from .context import container, register
+from .context import _container, register
 
 
-def __get_existing_annot(f, container: Container = container) -> dict[str, Type]:
+def __get_existing_annot(f, container: Container = _container) -> dict[str, Type]:
     """
     Get the existing annotations in a function.
     """
@@ -23,7 +23,7 @@ def __get_existing_annot(f, container: Container = container) -> dict[str, Type]
     return existing_annot
     
 
-def inject(_func=None, *, container: Container = container):
+def inject(_func=None, *, container: Container = _container):
     """
     Decorator to inject dependencies into a function.
 

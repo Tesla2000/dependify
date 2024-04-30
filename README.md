@@ -161,21 +161,3 @@ def use_some_class(some_class: SomeClass):
 def use_some_class(some_class: SomeClass):
     pass
 ```
-
-Another way of using your own container is setting it as the global container.
-```python
-from dependify import Container, set_container
-
-class SomeClass:
-    pass
-
-my_container = Container()
-my_container.register(SomeClass)
-
-
-set_container(my_container)
-
-@inject
-def use_some_class(some_class: SomeClass):
-    pass
-```

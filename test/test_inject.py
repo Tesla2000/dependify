@@ -6,7 +6,7 @@ from dependify import inject
 class TestInject(TestCase):
     
     @patch('dependify.decorators.__get_existing_annot')
-    @patch('dependify.decorators.container.resolve')
+    @patch('dependify.decorators._container.resolve')
     def test_inject_class(self, mock_resolve, mock_get_dependencies):
         """
         Test if the `inject` decorator can be used to resolve class dependencies.
