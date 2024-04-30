@@ -13,7 +13,7 @@ class TestContainer(TestCase):
 
         container = Container()
         container.register(A)
-        self.assertIn(A, container.dependencies)
+        self.assertTrue(container.has(A))
     
     def test_container_register_function(self):
         """
@@ -28,7 +28,7 @@ class TestContainer(TestCase):
             return A()
         
         container.register(A, func)
-        self.assertIn(A, container.dependencies)
+        self.assertTrue(container.has(A))
     
     def test_container_resolve(self):
         """
