@@ -1,6 +1,6 @@
 from unittest import TestCase
 from unittest.mock import patch
-from dependify import inject, Container
+from dependify import inject
 
 
 class TestInject(TestCase):
@@ -27,6 +27,7 @@ class TestInject(TestCase):
         """
         Test if the `inject` decorator can be used with a custom container.
         """
+        from dependify import Container
         class A:
             pass
 
