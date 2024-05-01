@@ -24,12 +24,12 @@ class Container:
 
     __dependencies: dict[Type, Dependency] = {}
 
-    def __init__(self, dependencies: dict[str, Dependency] = {}):
+    def __init__(self, dependencies: dict[Type, Dependency] = {}):
         """
         Initializes a new instance of the `Container` class.
 
         Args:
-            dependencies (dict[str, Dependency], optional): A dictionary of dependencies to be registered. Defaults to an empty dictionary.
+            dependencies (dict[Type, Dependency], optional): A dictionary of dependencies to be registered. Defaults to an empty dictionary.
         """
         self.__dependencies = dependencies
 
