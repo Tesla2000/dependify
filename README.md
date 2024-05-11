@@ -78,6 +78,26 @@ Then you'll have any sort of combinations of dependencies that will be hard to t
 Dependify offers to take this bullet for you by automatically instantiating and wiring up dependencies so you can focus on creating value with your solution.
 
 ## Usage
+#### Installation
+```shell
+pip install dependify
+```
+#### Build from source
+Prepare the environment
+```shell
+git clone https://github.com/KennethUlloa/dependify
+cd dependify
+python -m venv .venv
+```
+Installation
+```bash
+pip install .
+```
+or build the wheel, this example will be using `build` library.
+```bash
+python -m build
+```
+Then the result will be located in the dist folder created during building.
 #### Out of the box usage
 ```python
 from dependify import injectable, inject
