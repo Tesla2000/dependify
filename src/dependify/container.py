@@ -1,6 +1,7 @@
 from inspect import signature
 from types import MappingProxyType
-from typing import Callable, Type, Optional, Any
+from typing import Any, Callable, Optional, Type
+
 from .dependency import Dependency
 
 
@@ -43,7 +44,13 @@ class Container:
         """
         self.__dependencies[name] = dependency
 
-    def register(self, name: Type, target: Type|Callable = None, cached: bool = False, autowired: bool = True) -> None:
+    def register(
+        self,
+        name: Type,
+        target: Type | Callable = None,
+        cached: bool = False,
+        autowired: bool = True,
+    ) -> None:
         """
         Registers a dependency with the specified name and target.
 
@@ -74,14 +81,14 @@ class Container:
 
         if not dependency.autowire:
             return dependency.resolve()
-        
+
         kwargs = {}
         parameters = signature(dependency.target).parameters
 
         for name, parameter in parameters.items():
             if parameter.annotation in self.__dependencies:
                 kwargs[name] = self.resolve(parameter.annotation)
-            
+
         return dependency.resolve(**kwargs)
 
     def has(self, name: Type) -> bool:
@@ -95,12 +102,9 @@ class Container:
             bool: True if the container has the dependency, False otherwise.
         """
         return name in self.__dependencies
-    
+
     def dependencies(self) -> MappingProxyType[Type, Dependency]:
         """
         Returns a read-only view of the container's dependencies.
         """
         return MappingProxyType(self.__dependencies)
-
-            
-        
