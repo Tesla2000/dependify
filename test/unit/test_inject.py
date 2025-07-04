@@ -1,12 +1,12 @@
 from unittest import TestCase
 from unittest.mock import patch
-from dependify import inject
+from src.dependify import inject
 
 
 class TestInject(TestCase):
     
-    @patch('dependify.decorators.__get_existing_annot')
-    @patch('dependify.decorators._container.resolve')
+    @patch('src.dependify.decorators.__get_existing_annot')
+    @patch('src.dependify.decorators._container.resolve')
     def test_inject_class(self, mock_resolve, mock_get_dependencies):
         """
         Test if the `inject` decorator can be used to resolve class dependencies.
@@ -27,7 +27,7 @@ class TestInject(TestCase):
         """
         Test if the `inject` decorator can be used with a custom container.
         """
-        from dependify import Container
+        from src.dependify import Container
         class A:
             pass
 

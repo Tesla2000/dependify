@@ -1,5 +1,5 @@
 from unittest import TestCase
-from dependify import Container
+from src.dependify import Container
 
 
 class TestContainer(TestCase):
