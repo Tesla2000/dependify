@@ -1,5 +1,6 @@
 from unittest import TestCase
-from dependify import Dependency
+
+from src.dependify import Dependency
 
 
 class TestDependency(TestCase):
@@ -8,6 +9,7 @@ class TestDependency(TestCase):
         """
         Test if the dependency can be resolved successfully.
         """
+
         class A:
             pass
 
@@ -15,11 +17,11 @@ class TestDependency(TestCase):
         result = dependency.resolve()
         self.assertIsInstance(result, A)
 
-    
     def test_dependency_resolve_with_args(self):
         """
         Test if the dependency can be resolved successfully with arguments.
         """
+
         class A:
             def __init__(self, value: int):
                 self.value = value
@@ -28,11 +30,12 @@ class TestDependency(TestCase):
         result = dependency.resolve(42)
         self.assertIsInstance(result, A)
         self.assertEqual(result.value, 42)
-    
+
     def test_dependency_resolve_with_kwargs(self):
         """
         Test if the dependency can be resolved successfully with keyword arguments.
         """
+
         class A:
             def __init__(self, value: int):
                 self.value = value
@@ -41,11 +44,12 @@ class TestDependency(TestCase):
         result = dependency.resolve(value=42)
         self.assertIsInstance(result, A)
         self.assertEqual(result.value, 42)
-    
+
     def test_dependency_resolve_cached(self):
         """
         Test if the dependency is cached when the `cached` property is set to `True`.
         """
+
         class A:
             pass
 
@@ -53,7 +57,7 @@ class TestDependency(TestCase):
         result1 = dependency.resolve()
         result2 = dependency.resolve()
         self.assertIs(result1, result2)
-    
+
     def test_dependency_resolve_not_cached(self):
         """
         Test if the dependency is not cached when the `cached` property is set to `False`.

@@ -1,6 +1,7 @@
 from inspect import signature
 from types import MappingProxyType
-from typing import Callable, Type
+from typing import Any, Callable, Optional, Type
+
 from .dependency import Dependency
 
 
@@ -15,25 +16,25 @@ class Container:
         dependencies (dict[Type, Dependency]): A dictionary that stores the registered dependencies.
 
     Methods:
-        __init__(self, dependencies: dict[str, Dependency] = {}): Initializes a new instance of the `Container` class.
+        __init__(self, dependencies: dict[str, Dependency]): Initializes a new instance of the `Container` class.
         register_dependency(self, name: Type, dependency: Dependency): Registers a dependency with the specified name.
         register(self, name: Type, target: Type|Callable = None, cached: bool = False, autowired: bool = True): Registers a dependency with the specified name and target.
         resolve(self, name: Type): Resolves a dependency with the specified name.
 
     """
 
-    __dependencies: dict[Type, Dependency] = {}
+    __dependencies: dict[Type, Dependency]
 
-    def __init__(self, dependencies: dict[Type, Dependency] = {}):
+    def __init__(self, dependencies: Optional[dict[Type, Dependency]] = None):
         """
         Initializes a new instance of the `Container` class.
 
         Args:
             dependencies (dict[Type, Dependency], optional): A dictionary of dependencies to be registered. Defaults to an empty dictionary.
         """
-        self.__dependencies = dependencies
+        self.__dependencies = dependencies or {}
 
-    def register_dependency(self, name: Type, dependency: Dependency):
+    def register_dependency(self, name: Type, dependency: Dependency) -> None:
         """
         Registers a dependency with the specified name.
 
@@ -43,7 +44,13 @@ class Container:
         """
         self.__dependencies[name] = dependency
 
-    def register(self, name: Type, target: Type|Callable = None, cached: bool = False, autowired: bool = True):
+    def register(
+        self,
+        name: Type,
+        target: Type | Callable = None,
+        cached: bool = False,
+        autowired: bool = True,
+    ) -> None:
         """
         Registers a dependency with the specified name and target.
 
@@ -57,7 +64,7 @@ class Container:
             target = name
         self.register_dependency(name, Dependency(target, cached, autowired))
 
-    def resolve(self, name: Type):
+    def resolve(self, name: Type) -> Any:
         """
         Resolves a dependency with the specified name.
 
@@ -74,14 +81,14 @@ class Container:
 
         if not dependency.autowire:
             return dependency.resolve()
-        
+
         kwargs = {}
         parameters = signature(dependency.target).parameters
 
         for name, parameter in parameters.items():
             if parameter.annotation in self.__dependencies:
                 kwargs[name] = self.resolve(parameter.annotation)
-            
+
         return dependency.resolve(**kwargs)
 
     def has(self, name: Type) -> bool:
@@ -95,12 +102,9 @@ class Container:
             bool: True if the container has the dependency, False otherwise.
         """
         return name in self.__dependencies
-    
-    def dependencies(self) -> dict[Type, Dependency]:
+
+    def dependencies(self) -> MappingProxyType[Type, Dependency]:
         """
         Returns a read-only view of the container's dependencies.
         """
         return MappingProxyType(self.__dependencies)
-
-            
-        

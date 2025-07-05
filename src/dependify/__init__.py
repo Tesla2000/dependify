@@ -30,8 +30,20 @@ C() # No need to pass in A and B since they are injected automatically
 ```
 """
 
-from .dependency import Dependency
 from .container import Container
-from .decorators import inject, injectable
-from .context import register, register_dependency, resolve, has, dependencies
+from .context import dependencies, has, register, register_dependency, resolve
+from .decorators import inject, injectable, injected
+from .dependency import Dependency
 
+__all__ = [
+    "Dependency",
+    "Container",
+    "inject",
+    "injectable",
+    "injected",
+    "register",
+    "register_dependency",
+    "resolve",
+    "has",
+    "dependencies",
+]

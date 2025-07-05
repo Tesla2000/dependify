@@ -9,9 +9,14 @@ class Dependency:
     cached: bool = False
     autowire: bool = True
     instance: Any = None
-    target: Callable|Type
+    target: Callable | Type
 
-    def __init__(self, target: Callable|Type, cached: bool = False, autowire: bool = True):
+    def __init__(
+        self,
+        target: Callable | Type,
+        cached: bool = False,
+        autowire: bool = True,
+    ):
         """
         Initializes a new instance of the `Dependency` class.
 
@@ -23,15 +28,15 @@ class Dependency:
         self.target = target
         self.cached = cached
         self.autowire = autowire
-    
+
     def resolve(self, *args, **kwargs):
         """
         Resolves the dependency by invoking the target function or creating an instance of the target class.
-        
+
         Args:
             *args: Variable length argument list to be passed to the target function or class constructor.
             **kwargs: Arbitrary keyword arguments to be passed to the target function or class constructor.
-        
+
         Returns:
             The resolved dependency object.
         """
