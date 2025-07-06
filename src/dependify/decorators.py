@@ -1,6 +1,6 @@
-from functools import wraps
+from functools import partial, wraps
 from inspect import Parameter, Signature, signature
-from typing import Optional, Type, TypeVar
+from typing import Callable, Optional, Type, TypeVar, Union
 
 from .container import Container
 from .context import _container, register
@@ -86,11 +86,13 @@ class_type = TypeVar("class_type", bound=type)
 
 
 def injected(
-    class_: class_type, *, container: Container = _container
-) -> class_type:
+    class_: Optional[class_type] = None, *, container: Container = _container
+) -> Union[class_type, Callable[[class_type], class_type]]:
     """
     Decorator to create default constructor of a class it none present
     """
+    if class_ is None:
+        return partial(injected, container=container)
     if "__init__" in class_.__dict__:
         return class_
     annotations = tuple(class_.__annotations__.items())
@@ -130,7 +132,8 @@ def injected(
 
     __init__.__annotations__ = class_.__annotations__.copy()
     __init__.__signature__ = Signature(
-        tuple(
+        (Parameter("self", Parameter.POSITIONAL_OR_KEYWORD),)
+        + tuple(
             Parameter(
                 name, Parameter.POSITIONAL_OR_KEYWORD, annotation=annotation
             )
@@ -142,30 +145,29 @@ def injected(
 
 
 def wired(
-    _class=None, *, patch=None, cached=False, container: Container = _container
-):
+    class_: Optional[class_type] = None,
+    *,
+    patch=None,
+    cached=False,
+    autowire=True,
+    container: Container = _container,
+) -> Union[class_type, Callable[[class_type], class_type]]:
     """
     Decorator that combines @injectable and @injected decorators.
     Registers a class as injectable and auto-generates constructor with dependency injection.
-
-    Parameters:
-        patch (Type): The type to patch.
-        cached (bool): Whether the dependency should be cached.
-        container (Container): The container to use for dependency resolution.
     """
-
-    def decorator(cls):
-        if container is not _container:
-            if patch:
-                container.register(patch, cls, cached, autowired=False)
-            else:
-                container.register(cls, None, cached, autowired=False)
-        else:
-            cls = injectable(cls, patch=patch, cached=cached, autowire=False)
-
-        return injected(cls, container=container)
-
-    if _class is None:
-        return decorator
-    else:
-        return decorator(_class)
+    if class_ is None:
+        return partial(
+            wired,
+            patch=patch,
+            cached=cached,
+            autowire=autowire,
+            container=container,
+        )
+    return injectable(
+        injected(class_, container=container),
+        patch=patch,
+        cached=cached,
+        autowire=autowire,
+        container=container,
+    )
