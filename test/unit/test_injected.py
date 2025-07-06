@@ -1,4 +1,5 @@
 from inspect import signature
+from typing import Protocol, runtime_checkable
 from unittest import TestCase
 
 from src.dependify import injectable
@@ -469,3 +470,192 @@ class TestInjected(TestCase):
         # Verify class name and module are preserved
         self.assertEqual(TestClass.__name__, "TestClass")
         self.assertEqual(TestClass.__module__, __name__)
+
+    def test_injected_with_multiple_custom_containers(self):
+        """Test @injected with multiple custom containers"""
+        container1 = Container()
+        container2 = Container()
+
+        @injectable(container=container1)
+        class Service1:
+            def __init__(self):
+                self.name = "Service from Container1"
+
+        @injectable(container=container2)
+        class Service2:
+            def __init__(self):
+                self.name = "Service from Container2"
+
+        # Test class using container1
+        @injected(container=container1)
+        class App1:
+            service: Service1
+            version: str
+
+        # Test class using container2
+        @injected(container=container2)
+        class App2:
+            service: Service2
+            version: str
+
+        # App1 should resolve Service1 from container1
+        app1 = App1(version="1.0")
+        self.assertIsInstance(app1.service, Service1)
+        self.assertEqual(app1.service.name, "Service from Container1")
+        self.assertEqual(app1.version, "1.0")
+
+        # App2 should resolve Service2 from container2
+        app2 = App2(version="2.0")
+        self.assertIsInstance(app2.service, Service2)
+        self.assertEqual(app2.service.name, "Service from Container2")
+        self.assertEqual(app2.version, "2.0")
+
+        # Service1 should not be available in container2
+        self.assertFalse(container2.has(Service1))
+        # Service2 should not be available in container1
+        self.assertFalse(container1.has(Service2))
+
+    def test_injected_with_dependencies_from_different_containers(self):
+        """Test @injected with dependencies registered in different containers"""
+        container1 = Container()
+        container2 = Container()
+
+        @injectable(container=container1)
+        class Database:
+            def __init__(self):
+                self.name = "MainDB"
+
+        @injectable(container=container2)
+        class Logger:
+            def __init__(self):
+                self.level = "DEBUG"
+
+        # This should fail because App is using container1 but Logger is in container2
+        @injected(container=container1)
+        class AppWithMissingDep:
+            db: Database
+            logger: Logger  # This is not in container1
+            name: str
+
+        # Should raise TypeError because Logger is not in container1
+        with self.assertRaises(TypeError) as cm:
+            AppWithMissingDep(name="TestApp")
+        self.assertIn("Missing arguments: logger", str(cm.exception))
+
+        # Now register Logger in container1 as well
+        container1.register(Logger)
+
+        # Now it should work
+        app = AppWithMissingDep(name="TestApp")
+        self.assertIsInstance(app.db, Database)
+        self.assertIsInstance(app.logger, Logger)
+        self.assertEqual(app.name, "TestApp")
+
+    def test_injected_container_isolation(self):
+        """Test that @injected with custom containers maintains isolation"""
+        default_container = _container
+        custom_container = Container()
+
+        # Register in default container
+        @injectable
+        class DefaultService:
+            def __init__(self):
+                self.source = "default"
+
+        # Register in custom container
+        @injectable(container=custom_container)
+        class CustomService:
+            def __init__(self):
+                self.source = "custom"
+
+        # Also register DefaultService in custom container with different implementation
+        @injectable(container=custom_container, patch=DefaultService)
+        class CustomDefaultService(DefaultService):
+            def __init__(self):
+                self.source = "custom-override"
+
+        # Class using default container
+        @injected
+        class DefaultApp:
+            service: DefaultService
+            name: str
+
+        # Class using custom container
+        @injected(container=custom_container)
+        class CustomApp:
+            service: (
+                DefaultService  # Should get CustomDefaultService due to patch
+            )
+            custom_service: CustomService
+            name: str
+
+        # Test default container app
+        default_app = DefaultApp(name="Default")
+        self.assertEqual(default_app.service.source, "default")
+        self.assertEqual(default_app.name, "Default")
+
+        # Test custom container app
+        custom_app = CustomApp(name="Custom")
+        self.assertEqual(
+            custom_app.service.source, "custom-override"
+        )  # Patched version
+        self.assertEqual(custom_app.custom_service.source, "custom")
+        self.assertEqual(custom_app.name, "Custom")
+
+        # Verify isolation - CustomService should not be in default container
+        self.assertFalse(default_container.has(CustomService))
+        self.assertTrue(custom_container.has(CustomService))
+
+    def test_injected_container_isolation_wrong_type(self):
+        custom_container = Container()
+
+        # Register in default container
+        @injectable
+        class DefaultService:
+            source: str
+
+        # Also register DefaultService in custom container with different implementation
+        @injectable(container=custom_container, patch=DefaultService)
+        class CustomDefaultService:
+            def __init__(self):
+                self.source = "custom-override"
+
+        # Class using custom container
+        @injected(container=custom_container)
+        class CustomApp:
+            service: (
+                DefaultService  # Should get CustomDefaultService due to patch
+            )
+            name: str
+
+        # Test custom container app
+        with self.assertRaises(
+            TypeError,
+            msg="Expected <class 'test_injected.TestInjected.test_injected_container_isolation_wrong_type.<locals>.DefaultService'> for service, got <class 'test_injected.TestInjected.test_injected_container_isolation_wrong_type.<locals>.CustomDefaultService'>",
+        ):
+            CustomApp(name="Custom")
+
+    def test_injected_container_isolation_interface(self):
+        custom_container = Container()
+
+        # Register in default container
+        @injectable
+        @runtime_checkable
+        class DefaultService(Protocol):
+            source: str
+
+        # Also register DefaultService in custom container with different implementation
+        @injectable(container=custom_container, patch=DefaultService)
+        class CustomDefaultService:
+            def __init__(self):
+                self.source = "custom-override"
+
+        # Class using custom container
+        @injected(container=custom_container)
+        class CustomApp:
+            service: (
+                DefaultService  # Should get CustomDefaultService due to patch
+            )
+            name: str
+
+        CustomApp(name="Custom")
