@@ -1,7 +1,6 @@
 from functools import wraps
 from inspect import Parameter, Signature, signature
-from typing import Optional, Type
-from typing import Type, TypeVar
+from typing import Optional, Type, TypeVar
 
 from .container import Container
 from .context import _container, register
