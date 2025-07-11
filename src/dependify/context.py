@@ -3,7 +3,7 @@ from typing import Callable, Type, Union
 from .dependency import Dependency
 from .dependency_registry import DependencyRegistry
 
-_container = DependencyRegistry()
+_registry = DependencyRegistry()
 
 
 # Shortcuts
@@ -12,41 +12,41 @@ def register(
     target: Union[Type, Callable] = None,
     cached: bool = False,
     autowired: bool = True,
-    container: DependencyRegistry = _container,
+    registry: DependencyRegistry = _registry,
 ):
     """
     Registers a dependency with the specified name and target.
     """
-    return container.register(name, target, cached, autowired)
+    return registry.register(name, target, cached, autowired)
 
 
 def register_dependency(
     name: Type,
     dependency: Dependency,
-    container: DependencyRegistry = _container,
+    registry: DependencyRegistry = _registry,
 ):
     """
     Registers a dependency with the specified name.
     """
-    return container.register_dependency(name, dependency)
+    return registry.register_dependency(name, dependency)
 
 
 def resolve(name: Type):
     """
     Resolves a dependency with the specified name.
     """
-    return _container.resolve(name)
+    return _registry.resolve(name)
 
 
 def has(name: Type):
     """
     Checks if a dependency with the specified name exists.
     """
-    return _container.has(name)
+    return _registry.has(name)
 
 
 def dependencies():
     """
-    Returns the dependencies in the container.
+    Returns the dependencies in the registry.
     """
-    return _container.dependencies()
+    return _registry.dependencies()

@@ -7,7 +7,7 @@ from .dependency import Dependency
 
 class DependencyRegistry:
     """
-    A class representing a dependency injection container.
+    A class representing a dependency injection registry.
 
     The `Container` class is responsible for registering and resolving dependencies.
     It allows you to register dependencies by name and resolve them when needed.
@@ -93,19 +93,19 @@ class DependencyRegistry:
 
     def has(self, name: Type) -> bool:
         """
-        Checks if the container has a dependency with the specified name.
+        Checks if the registry has a dependency with the specified name.
 
         Args:
             name (Type): The name of the dependency.
 
         Returns:
-            bool: True if the container has the dependency, False otherwise.
+            bool: True if the registry has the dependency, False otherwise.
         """
         return name in self._dependencies
 
     def dependencies(self) -> MappingProxyType[Type, Dependency]:
         """
-        Returns a read-only view of the container's dependencies.
+        Returns a read-only view of the registry's dependencies.
         """
         return MappingProxyType(self._dependencies)
 

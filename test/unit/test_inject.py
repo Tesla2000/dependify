@@ -7,7 +7,7 @@ from src.dependify import inject
 class TestInject(TestCase):
 
     @patch("src.dependify.decorators.__get_existing_annot")
-    @patch("src.dependify.decorators._container.resolve")
+    @patch("src.dependify.decorators._registry.resolve")
     def test_inject_class(self, mock_resolve, mock_get_dependencies):
         """
         Test if the `inject` decorator can be used to resolve class dependencies.
@@ -25,19 +25,19 @@ class TestInject(TestCase):
 
         test()
 
-    def test_inject_with_container(self):
+    def test_inject_with_registry(self):
         """
-        Test if the `inject` decorator can be used with a custom container.
+        Test if the `inject` decorator can be used with a custom registry.
         """
         from src.dependify import DependencyRegistry
 
         class A:
             pass
 
-        container = DependencyRegistry()
-        container.register(A)
+        registry = DependencyRegistry()
+        registry.register(A)
 
-        @inject(container=container)
+        @inject(registry=registry)
         def test(a: A):
             self.assertIsInstance(a, A)
 
