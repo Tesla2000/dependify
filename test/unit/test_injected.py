@@ -3,16 +3,16 @@ from typing import Protocol, runtime_checkable
 from unittest import TestCase
 
 from src.dependify import injectable
-from src.dependify.container import Container
 from src.dependify.context import _container
 from src.dependify.decorators import injected
+from src.dependify.dependency_registry import DependencyRegistry
 
 
 class TestInjected(TestCase):
     def setUp(self):
         """Reset the global container before each test"""
         # Access the private attribute correctly with name mangling
-        _container._Container__dependencies.clear()
+        _container.clear()
 
     def test_injected_basic_functionality(self):
         """Test basic @injected functionality with simple class"""
@@ -183,7 +183,7 @@ class TestInjected(TestCase):
 
     def test_injected_with_custom_container(self):
         """Test @injected with custom container"""
-        custom_container = Container()
+        custom_container = DependencyRegistry()
 
         class CustomService:
             def __init__(self):
@@ -473,8 +473,8 @@ class TestInjected(TestCase):
 
     def test_injected_with_multiple_custom_containers(self):
         """Test @injected with multiple custom containers"""
-        container1 = Container()
-        container2 = Container()
+        container1 = DependencyRegistry()
+        container2 = DependencyRegistry()
 
         @injectable(container=container1)
         class Service1:
@@ -517,8 +517,8 @@ class TestInjected(TestCase):
 
     def test_injected_with_dependencies_from_different_containers(self):
         """Test @injected with dependencies registered in different containers"""
-        container1 = Container()
-        container2 = Container()
+        container1 = DependencyRegistry()
+        container2 = DependencyRegistry()
 
         @injectable(container=container1)
         class Database:
@@ -554,7 +554,7 @@ class TestInjected(TestCase):
     def test_injected_container_isolation(self):
         """Test that @injected with custom containers maintains isolation"""
         default_container = _container
-        custom_container = Container()
+        custom_container = DependencyRegistry()
 
         # Register in default container
         @injectable
@@ -607,7 +607,7 @@ class TestInjected(TestCase):
         self.assertTrue(custom_container.has(CustomService))
 
     def test_injected_container_isolation_wrong_type(self):
-        custom_container = Container()
+        custom_container = DependencyRegistry()
 
         # Register in default container
         @injectable
@@ -636,7 +636,7 @@ class TestInjected(TestCase):
             CustomApp(name="Custom")
 
     def test_injected_container_isolation_interface(self):
-        custom_container = Container()
+        custom_container = DependencyRegistry()
 
         # Register in default container
         @injectable

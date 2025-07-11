@@ -29,12 +29,12 @@ class TestInject(TestCase):
         """
         Test if the `inject` decorator can be used with a custom container.
         """
-        from src.dependify import Container
+        from src.dependify import DependencyRegistry
 
         class A:
             pass
 
-        container = Container()
+        container = DependencyRegistry()
         container.register(A)
 
         @inject(container=container)

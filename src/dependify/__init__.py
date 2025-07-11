@@ -30,14 +30,14 @@ C() # No need to pass in A and B since they are injected automatically
 ```
 """
 
-from .container import Container
 from .context import dependencies, has, register, register_dependency, resolve
 from .decorators import inject, injectable, injected, wired
 from .dependency import Dependency
+from .dependency_registry import DependencyRegistry
 
 __all__ = [
     "Dependency",
-    "Container",
+    "DependencyRegistry",
     "inject",
     "injectable",
     "injected",

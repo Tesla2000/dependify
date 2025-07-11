@@ -1,18 +1,18 @@
-from typing import Callable, Type
+from typing import Callable, Type, Union
 
-from .container import Container
 from .dependency import Dependency
+from .dependency_registry import DependencyRegistry
 
-_container = Container()
+_container = DependencyRegistry()
 
 
 # Shortcuts
 def register(
     name: Type,
-    target: Type | Callable = None,
+    target: Union[Type, Callable] = None,
     cached: bool = False,
     autowired: bool = True,
-    container: Container = _container,
+    container: DependencyRegistry = _container,
 ):
     """
     Registers a dependency with the specified name and target.
@@ -23,7 +23,7 @@ def register(
 def register_dependency(
     name: Type,
     dependency: Dependency,
-    container: Container = _container,
+    container: DependencyRegistry = _container,
 ):
     """
     Registers a dependency with the specified name.
