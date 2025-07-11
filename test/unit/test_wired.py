@@ -5,7 +5,7 @@ from src.dependify import DependencyRegistry, has, inject, wired
 
 class TestWired(unittest.TestCase):
     def setUp(self):
-        self.container = DependencyRegistry()
+        self.registry = DependencyRegistry()
 
     def test_wired_basic_functionality(self):
         @wired
@@ -131,26 +131,26 @@ class TestWired(unittest.TestCase):
         service = ServiceWithAutowire()
         self.assertEqual(service.dep.get_value(), 42)
 
-    def test_wired_with_custom_container(self):
-        custom_container = DependencyRegistry()
+    def test_wired_with_custom_registry(self):
+        custom_registry = DependencyRegistry()
 
-        @wired(container=custom_container)
+        @wired(registry=custom_registry)
         class CustomService:
             def get_message(self):
-                return "Custom container service"
+                return "Custom registry service"
 
-        @wired(container=custom_container)
+        @wired(registry=custom_registry)
         class CustomClient:
             service: CustomService
 
             def execute(self):
                 return self.service.get_message()
 
-        # Since @wired uses custom container, we need to create it directly
+        # Since @wired uses custom registry, we need to create it directly
         client = CustomClient()
-        self.assertEqual(client.execute(), "Custom container service")
+        self.assertEqual(client.execute(), "Custom registry service")
 
-        # CustomClient should not be in the default container
+        # CustomClient should not be in the default registry
         self.assertFalse(has(CustomClient))
 
     def test_wired_preserves_class_attributes(self):

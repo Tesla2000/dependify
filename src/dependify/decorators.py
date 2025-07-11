@@ -2,12 +2,12 @@ from functools import partial, wraps
 from inspect import Parameter, Signature, signature
 from typing import Callable, Optional, Type, TypeVar, Union
 
-from .context import _container, register
+from .context import _registry, register
 from .dependency_registry import DependencyRegistry
 
 
 def __get_existing_annot(
-    f, container: DependencyRegistry = _container
+    f, registry: DependencyRegistry = _registry
 ) -> dict[str, Type]:
     """
     Get the existing annotations in a function.
@@ -19,28 +19,28 @@ def __get_existing_annot(
         if parameter.default != parameter.empty:
             continue
 
-        if container.has(parameter.annotation):
+        if registry.has(parameter.annotation):
             existing_annot[name] = parameter.annotation
 
     return existing_annot
 
 
-def inject(_func=None, *, container: DependencyRegistry = _container):
+def inject(_func=None, *, registry: DependencyRegistry = _registry):
     """
     Decorator to inject dependencies into a function.
 
     Parameters:
-        container (DependencyRegistry): the container used to inject the dependencies. Defaults to module container.
+        registry (DependencyRegistry): the registry used to inject the dependencies. Defaults to module registry.
     """
 
     def decorated(func):
         @wraps(func)
         def subdecorator(*args, **kwargs):
             for name, annotation in __get_existing_annot(
-                func, container
+                func, registry
             ).items():
                 if name not in kwargs:  # Only inject if not already provided
-                    kwargs[name] = container.resolve(annotation)
+                    kwargs[name] = registry.resolve(annotation)
             return func(*args, **kwargs)
 
         return subdecorator
@@ -58,7 +58,7 @@ def injectable(
     patch: Optional[Type] = None,
     cached=False,
     autowire=True,
-    container: DependencyRegistry = _container,
+    registry: DependencyRegistry = _registry,
 ):
     """
     Decorator to register a class as an injectable dependency.
@@ -70,9 +70,9 @@ def injectable(
 
     def decorator(func):
         if patch:
-            register(patch, func, cached, autowire, container)
+            register(patch, func, cached, autowire, registry)
         else:
-            register(func, None, cached, autowire, container)
+            register(func, None, cached, autowire, registry)
 
         return func
 
@@ -88,13 +88,14 @@ class_type = TypeVar("class_type", bound=type)
 def injected(
     class_: Optional[class_type] = None,
     *,
-    container: DependencyRegistry = _container
+    validate: bool = True,
+    registry: DependencyRegistry = _registry,
 ) -> Union[class_type, Callable[[class_type], class_type]]:
     """
     Decorator to create default constructor of a class it none present
     """
     if class_ is None:
-        return partial(injected, container=container)
+        return partial(injected, registry=registry, validate=validate)
     if "__init__" in class_.__dict__:
         return class_
     annotations = tuple(class_.__annotations__.items())
@@ -102,7 +103,7 @@ def injected(
     def __init__(self, *args, **kwargs):
         annotations_iter = iter(annotations)
         for arg, (field_name, field_type) in zip(args, annotations_iter):
-            if not isinstance(arg, field_type):
+            if validate and not isinstance(arg, field_type):
                 raise TypeError(
                     f"Expected {field_type} for {field_name}, got {type(arg)}"
                 )
@@ -119,7 +120,7 @@ def injected(
                     f"Keyword argument: {field_name} already provided as a positional argument"
                 )
             field_type = class_.__annotations__[field_name]
-            if not isinstance(value, field_type):
+            if validate and not isinstance(value, field_type):
                 raise TypeError(
                     f"Expected {field_type} for {field_name}, got {type(value)}"
                 )
@@ -142,7 +143,7 @@ def injected(
             for name, annotation in __init__.__annotations__.items()
         )
     )
-    class_.__init__ = inject(__init__, container=container)
+    class_.__init__ = inject(__init__, registry=registry)
     return class_
 
 
@@ -152,7 +153,8 @@ def wired(
     patch=None,
     cached=False,
     autowire=True,
-    container: DependencyRegistry = _container,
+    validate: bool = True,
+    registry: DependencyRegistry = _registry,
 ) -> Union[class_type, Callable[[class_type], class_type]]:
     """
     Decorator that combines @injectable and @injected decorators.
@@ -164,12 +166,13 @@ def wired(
             patch=patch,
             cached=cached,
             autowire=autowire,
-            container=container,
+            validate=validate,
+            registry=registry,
         )
     return injectable(
-        injected(class_, container=container),
+        injected(class_, validate=validate, registry=registry),
         patch=patch,
         cached=cached,
         autowire=autowire,
-        container=container,
+        registry=registry,
     )
