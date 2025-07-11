@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from src.dependify import Container
+from src.dependify import DependencyRegistry
 
 
 class TestContainer(TestCase):
@@ -13,7 +13,7 @@ class TestContainer(TestCase):
         class A:
             pass
 
-        container = Container()
+        container = DependencyRegistry()
         container.register(A)
         self.assertTrue(container.has(A))
 
@@ -21,7 +21,7 @@ class TestContainer(TestCase):
         """
         Test if a function based dependency can be registered successfully.
         """
-        container = Container()
+        container = DependencyRegistry()
 
         class A:
             pass
@@ -40,7 +40,7 @@ class TestContainer(TestCase):
         class A:
             pass
 
-        container = Container()
+        container = DependencyRegistry()
         container.register(A)
         result = container.resolve(A)
         self.assertIsInstance(result, A)
@@ -53,7 +53,7 @@ class TestContainer(TestCase):
         class A:
             pass
 
-        container = Container()
+        container = DependencyRegistry()
         container.register(A, cached=True)
         result1 = container.resolve(A)
         result2 = container.resolve(A)
@@ -67,7 +67,7 @@ class TestContainer(TestCase):
         class A:
             pass
 
-        container = Container()
+        container = DependencyRegistry()
         container.register(A, cached=False)
         result1 = container.resolve(A)
         result2 = container.resolve(A)
@@ -81,7 +81,7 @@ class TestContainer(TestCase):
         class A:
             pass
 
-        container = Container()
+        container = DependencyRegistry()
         container.register(A)
         result1 = container.resolve(A)
         result2 = container.resolve(A)
@@ -99,7 +99,7 @@ class TestContainer(TestCase):
             def __init__(self, b: B):
                 self.b = b
 
-        container = Container()
+        container = DependencyRegistry()
         container.register(A)
         container.register(B)
         result = container.resolve(A)
@@ -118,7 +118,7 @@ class TestContainer(TestCase):
             def __init__(self, b: B):
                 self.b = b
 
-        container = Container()
+        container = DependencyRegistry()
         container.register(A, autowired=False)
         container.register(B)
 

@@ -2,12 +2,12 @@ from functools import partial, wraps
 from inspect import Parameter, Signature, signature
 from typing import Callable, Optional, Type, TypeVar, Union
 
-from .container import Container
 from .context import _container, register
+from .dependency_registry import DependencyRegistry
 
 
 def __get_existing_annot(
-    f, container: Container = _container
+    f, container: DependencyRegistry = _container
 ) -> dict[str, Type]:
     """
     Get the existing annotations in a function.
@@ -25,12 +25,12 @@ def __get_existing_annot(
     return existing_annot
 
 
-def inject(_func=None, *, container: Container = _container):
+def inject(_func=None, *, container: DependencyRegistry = _container):
     """
     Decorator to inject dependencies into a function.
 
     Parameters:
-        container (Container): the container used to inject the dependencies. Defaults to module container.
+        container (DependencyRegistry): the container used to inject the dependencies. Defaults to module container.
     """
 
     def decorated(func):
@@ -58,7 +58,7 @@ def injectable(
     patch: Optional[Type] = None,
     cached=False,
     autowire=True,
-    container: Container = _container,
+    container: DependencyRegistry = _container,
 ):
     """
     Decorator to register a class as an injectable dependency.
@@ -86,7 +86,9 @@ class_type = TypeVar("class_type", bound=type)
 
 
 def injected(
-    class_: Optional[class_type] = None, *, container: Container = _container
+    class_: Optional[class_type] = None,
+    *,
+    container: DependencyRegistry = _container
 ) -> Union[class_type, Callable[[class_type], class_type]]:
     """
     Decorator to create default constructor of a class it none present
@@ -150,7 +152,7 @@ def wired(
     patch=None,
     cached=False,
     autowire=True,
-    container: Container = _container,
+    container: DependencyRegistry = _container,
 ) -> Union[class_type, Callable[[class_type], class_type]]:
     """
     Decorator that combines @injectable and @injected decorators.

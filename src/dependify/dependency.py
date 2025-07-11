@@ -1,4 +1,4 @@
-from typing import Any, Callable, Type
+from typing import Any, Callable, Type, Union
 
 
 class Dependency:
@@ -9,11 +9,11 @@ class Dependency:
     cached: bool = False
     autowire: bool = True
     instance: Any = None
-    target: Callable | Type
+    target: Union[Type, Callable]
 
     def __init__(
         self,
-        target: Callable | Type,
+        target: Union[Type, Callable],
         cached: bool = False,
         autowire: bool = True,
     ):

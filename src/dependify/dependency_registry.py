@@ -1,11 +1,11 @@
 from inspect import signature
 from types import MappingProxyType
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable, Optional, Type, Union
 
 from .dependency import Dependency
 
 
-class Container:
+class DependencyRegistry:
     """
     A class representing a dependency injection container.
 
@@ -23,7 +23,7 @@ class Container:
 
     """
 
-    __dependencies: dict[Type, Dependency]
+    _dependencies: dict[Type, Dependency]
 
     def __init__(self, dependencies: Optional[dict[Type, Dependency]] = None):
         """
@@ -32,7 +32,7 @@ class Container:
         Args:
             dependencies (dict[Type, Dependency], optional): A dictionary of dependencies to be registered. Defaults to an empty dictionary.
         """
-        self.__dependencies = dependencies or {}
+        self._dependencies = dependencies or {}
 
     def register_dependency(self, name: Type, dependency: Dependency) -> None:
         """
@@ -42,12 +42,12 @@ class Container:
             name (Type): The name of the dependency.
             dependency (Dependency): The dependency to be registered.
         """
-        self.__dependencies[name] = dependency
+        self._dependencies[name] = dependency
 
     def register(
         self,
         name: Type,
-        target: Type | Callable = None,
+        target: Union[Type, Callable] = None,
         cached: bool = False,
         autowired: bool = True,
     ) -> None:
@@ -74,10 +74,10 @@ class Container:
         Returns:
             Any: The resolved dependency, or None if the dependency is not registered.
         """
-        if name not in self.__dependencies:
+        if name not in self._dependencies:
             return None
 
-        dependency = self.__dependencies[name]
+        dependency = self._dependencies[name]
 
         if not dependency.autowire:
             return dependency.resolve()
@@ -86,7 +86,7 @@ class Container:
         parameters = signature(dependency.target).parameters
 
         for name, parameter in parameters.items():
-            if parameter.annotation in self.__dependencies:
+            if parameter.annotation in self._dependencies:
                 kwargs[name] = self.resolve(parameter.annotation)
 
         return dependency.resolve(**kwargs)
@@ -101,10 +101,13 @@ class Container:
         Returns:
             bool: True if the container has the dependency, False otherwise.
         """
-        return name in self.__dependencies
+        return name in self._dependencies
 
     def dependencies(self) -> MappingProxyType[Type, Dependency]:
         """
         Returns a read-only view of the container's dependencies.
         """
-        return MappingProxyType(self.__dependencies)
+        return MappingProxyType(self._dependencies)
+
+    def clear(self):
+        self._dependencies = {}

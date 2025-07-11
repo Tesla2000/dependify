@@ -1,11 +1,11 @@
 import unittest
 
-from src.dependify import Container, has, inject, wired
+from src.dependify import DependencyRegistry, has, inject, wired
 
 
 class TestWired(unittest.TestCase):
     def setUp(self):
-        self.container = Container()
+        self.container = DependencyRegistry()
 
     def test_wired_basic_functionality(self):
         @wired
@@ -132,7 +132,7 @@ class TestWired(unittest.TestCase):
         self.assertEqual(service.dep.get_value(), 42)
 
     def test_wired_with_custom_container(self):
-        custom_container = Container()
+        custom_container = DependencyRegistry()
 
         @wired(container=custom_container)
         class CustomService:
