@@ -1,14 +1,15 @@
+import sys
 from functools import partial, wraps
 from inspect import Parameter, Signature, signature
-from typing import Callable, Optional, Type, TypeVar, Union
+from typing import Callable, Dict, Optional, Type, TypeVar, Union
 
 from .context import _registry, register
 from .dependency_registry import DependencyRegistry
 
 
-def __get_existing_annot(
+def _get_existing_annot(
     f, registry: DependencyRegistry = _registry
-) -> dict[str, Type]:
+) -> Dict[str, Type]:
     """
     Get the existing annotations in a function.
     """
@@ -36,7 +37,7 @@ def inject(_func=None, *, registry: DependencyRegistry = _registry):
     def decorated(func):
         @wraps(func)
         def subdecorator(*args, **kwargs):
-            for name, annotation in __get_existing_annot(
+            for name, annotation in _get_existing_annot(
                 func, registry
             ).items():
                 if name not in kwargs:  # Only inject if not already provided
@@ -98,12 +99,20 @@ def injected(
         return partial(injected, registry=registry, validate=validate)
     if "__init__" in class_.__dict__:
         return class_
-    annotations = tuple(class_.__annotations__.items())
+    if sys.version_info >= (3, 10, 0):
+        class_annotations = class_.__annotations__
+    else:
+        class_annotations = class_.__dict__.get("__annotations__", {})
+    annotations = tuple(class_annotations.items())
 
     def __init__(self, *args, **kwargs):
         annotations_iter = iter(annotations)
         for arg, (field_name, field_type) in zip(args, annotations_iter):
-            if validate and not isinstance(arg, field_type):
+            if (
+                validate
+                and isinstance(field_type, type)
+                and not isinstance(arg, field_type)
+            ):
                 raise TypeError(
                     f"Expected {field_type} for {field_name}, got {type(arg)}"
                 )
@@ -111,7 +120,7 @@ def injected(
         missing_args = set(field_name for field_name, _ in annotations_iter)
         kwargs_copy = kwargs.copy()
         for field_name, value in tuple(kwargs_copy.items()):
-            if field_name not in class_.__annotations__:
+            if field_name not in class_annotations:
                 raise TypeError(
                     f"Keyword argument: {field_name} not found in class {class_.__name__}"
                 )
@@ -119,8 +128,12 @@ def injected(
                 raise TypeError(
                     f"Keyword argument: {field_name} already provided as a positional argument"
                 )
-            field_type = class_.__annotations__[field_name]
-            if validate and not isinstance(value, field_type):
+            field_type = class_annotations[field_name]
+            if (
+                validate
+                and isinstance(field_type, type)
+                and not isinstance(value, field_type)
+            ):
                 raise TypeError(
                     f"Expected {field_type} for {field_name}, got {type(value)}"
                 )
@@ -133,7 +146,7 @@ def injected(
         if missing_args:
             raise TypeError(f"Missing arguments: {', '.join(missing_args)}")
 
-    __init__.__annotations__ = class_.__annotations__.copy()
+    __init__.__annotations__ = class_annotations.copy()
     __init__.__signature__ = Signature(
         (Parameter("self", Parameter.POSITIONAL_OR_KEYWORD),)
         + tuple(
