@@ -6,7 +6,7 @@ from src.dependify import inject
 
 class TestInject(TestCase):
 
-    @patch("src.dependify.decorators.__get_existing_annot")
+    @patch("src.dependify.decorators._get_existing_annot")
     @patch("src.dependify.decorators._registry.resolve")
     def test_inject_class(self, mock_resolve, mock_get_dependencies):
         """

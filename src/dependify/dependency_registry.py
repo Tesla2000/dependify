@@ -1,6 +1,6 @@
 from inspect import signature
 from types import MappingProxyType
-from typing import Any, Callable, Optional, Type, Union
+from typing import Any, Callable, Dict, Mapping, Optional, Type, Union
 
 from .dependency import Dependency
 
@@ -13,24 +13,24 @@ class DependencyRegistry:
     It allows you to register dependencies by name and resolve them when needed.
 
     Attributes:
-        dependencies (dict[Type, Dependency]): A dictionary that stores the registered dependencies.
+        dependencies (Dict[Type, Dependency]): A dictionary that stores the registered dependencies.
 
     Methods:
-        __init__(self, dependencies: dict[str, Dependency]): Initializes a new instance of the `Container` class.
+        __init__(self, dependencies: Dict[str, Dependency]): Initializes a new instance of the `Container` class.
         register_dependency(self, name: Type, dependency: Dependency): Registers a dependency with the specified name.
         register(self, name: Type, target: Type|Callable = None, cached: bool = False, autowired: bool = True): Registers a dependency with the specified name and target.
         resolve(self, name: Type): Resolves a dependency with the specified name.
 
     """
 
-    _dependencies: dict[Type, Dependency]
+    _dependencies: Dict[Type, Dependency]
 
-    def __init__(self, dependencies: Optional[dict[Type, Dependency]] = None):
+    def __init__(self, dependencies: Optional[Dict[Type, Dependency]] = None):
         """
         Initializes a new instance of the `Container` class.
 
         Args:
-            dependencies (dict[Type, Dependency], optional): A dictionary of dependencies to be registered. Defaults to an empty dictionary.
+            dependencies (Dict[Type, Dependency], optional): A dictionary of dependencies to be registered. Defaults to an empty dictionary.
         """
         self._dependencies = dependencies or {}
 
@@ -103,7 +103,7 @@ class DependencyRegistry:
         """
         return name in self._dependencies
 
-    def dependencies(self) -> MappingProxyType[Type, Dependency]:
+    def dependencies(self) -> Mapping[Type, Dependency]:
         """
         Returns a read-only view of the registry's dependencies.
         """
