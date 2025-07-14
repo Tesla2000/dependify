@@ -99,10 +99,7 @@ def injected(
         return partial(injected, registry=registry, validate=validate)
     if "__init__" in class_.__dict__:
         return class_
-    if sys.version_info >= (3, 10, 0):
-        class_annotations = class_.__annotations__
-    else:
-        class_annotations = class_.__dict__.get("__annotations__", {})
+    class_annotations = _get_annotations(class_)
     annotations = tuple(class_annotations.items())
 
     def __init__(self, *args, **kwargs):
@@ -158,6 +155,17 @@ def injected(
     )
     class_.__init__ = inject(__init__, registry=registry)
     return class_
+
+
+def _get_annotations(class_: Type) -> Dict[str, Type]:
+    class_annotations = {}
+    for ancestor in reversed(class_.__mro__[:-1]):  # remove object
+        if sys.version_info >= (3, 10, 0):
+            annotations = ancestor.__annotations__
+        else:
+            annotations = ancestor.__dict__.get("__annotations__", {})
+        class_annotations.update(annotations)
+    return class_annotations
 
 
 def wired(

@@ -229,6 +229,35 @@ class TestInjected(TestCase):
         self.assertIn("value", params)
         self.assertIn("enabled", params)
 
+    def test_injected_preserves_annotations_inheritance(self):
+        """Test that generated __init__ has correct annotations and signature"""
+
+        @injected
+        class AnnotatedClassAncestor:
+            name: int
+            value: int
+
+        @injected
+        class AnnotatedClass(AnnotatedClassAncestor):
+            name: str
+            enabled: bool
+
+        # Check that __init__ has the correct annotations
+        init_annotations = AnnotatedClass.__init__.__annotations__
+        self.assertIn("name", init_annotations)
+        self.assertEqual(init_annotations["name"], str)
+        self.assertIn("value", init_annotations)
+        self.assertEqual(init_annotations["value"], int)
+        self.assertIn("enabled", init_annotations)
+        self.assertEqual(init_annotations["enabled"], bool)
+
+        # Check that __init__ has a proper signature (not just *args, **kwargs)
+        sig = signature(AnnotatedClass.__init__)
+        params = list(sig.parameters.keys())
+        self.assertIn("name", params)
+        self.assertIn("value", params)
+        self.assertIn("enabled", params)
+
     def test_injected_with_optional_fields(self):
         """Test @injected with optional fields (fields with defaults)"""
         from typing import Optional
