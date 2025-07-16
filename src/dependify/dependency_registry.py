@@ -111,3 +111,12 @@ class DependencyRegistry:
 
     def clear(self):
         self._dependencies = {}
+
+    def __add__(self, other: "DependencyRegistry") -> "DependencyRegistry":
+        if not isinstance(other, DependencyRegistry):
+            raise ValueError(
+                f"Only {DependencyRegistry.__name__} can be added to {type(self).__name__}"
+            )
+        return type(self)(
+            dependencies={**other.dependencies(), **self.dependencies()}
+        )
