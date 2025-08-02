@@ -6,6 +6,7 @@ from typing import Optional
 from typing import TypeVar
 from typing import Union
 
+from dependify._conditional_result import ConditionalResult
 from dependify.context import default_registry
 from dependify.decorators import inject
 from dependify.dependency_registry import DependencyRegistry
@@ -71,6 +72,11 @@ def injected(
                 missing_args.remove(field_name)
         if missing_args:
             raise TypeError(f"Missing arguments: {', '.join(missing_args)}")
+        for key, value in tuple(self.__dict__.items()):
+            if isinstance(value, ConditionalResult):
+                self.__dict__[key] = value.resolve(self)
+        if hasattr(self, "__post_init__"):
+            self.__post_init__()
 
     __init__.__annotations__ = class_annotations.copy()
     __init__.__signature__ = Signature(

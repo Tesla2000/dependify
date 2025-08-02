@@ -8,7 +8,7 @@ from typing import Optional
 from typing import Type
 from typing import Union
 
-from dependify.dependencies import Dependency
+from dependify._dependency import Dependency
 
 
 class DependencyRegistry:

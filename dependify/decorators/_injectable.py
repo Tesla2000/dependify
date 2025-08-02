@@ -14,14 +14,6 @@ def injectable(
     autowire=True,
     registry: DependencyRegistry = default_registry,
 ):
-    """
-    Decorator to register a class as an injectable dependency.
-
-    Parameters:
-        patch (Type): The type to patch.
-        cached (bool): Whether the dependency should be cached.
-    """
-
     def decorator(func):
         if patch:
             register(patch, func, cached, autowire, registry)

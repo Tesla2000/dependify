@@ -2,7 +2,7 @@ from typing import Callable
 from typing import Type
 from typing import Union
 
-from dependify.dependencies import Dependency
+from dependify._dependency import Dependency
 from dependify.dependency_registry import DependencyRegistry
 
 default_registry = DependencyRegistry()
