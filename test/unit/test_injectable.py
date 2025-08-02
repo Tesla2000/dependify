@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from src.dependify import DependencyRegistry, has, injectable, resolve
+from dependify import DependencyRegistry, has, injectable, resolve
 
 
 class TestInjectable(TestCase):

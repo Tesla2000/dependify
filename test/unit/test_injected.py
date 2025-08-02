@@ -2,10 +2,10 @@ from inspect import signature
 from typing import Protocol, runtime_checkable
 from unittest import TestCase
 
-from src.dependify import injectable
-from src.dependify.context import _registry
-from src.dependify.decorators import injected
-from src.dependify.dependency_registry import DependencyRegistry
+from dependify import injectable
+from dependify import _registry
+from dependify import injected
+from dependify.dependency_registry import DependencyRegistry
 
 
 class TestInjected(TestCase):

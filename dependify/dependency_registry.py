@@ -2,7 +2,7 @@ from inspect import signature
 from types import MappingProxyType
 from typing import Any, Callable, Dict, Mapping, Optional, Type, Union
 
-from .dependency import Dependency
+from dependify.dependencies._dependency import Dependency
 
 
 class DependencyRegistry:

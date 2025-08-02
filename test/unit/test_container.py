@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from src.dependify import DependencyRegistry
+from dependify import DependencyRegistry
 
 
 class TestContainer(TestCase):
