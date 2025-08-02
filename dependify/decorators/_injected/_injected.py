@@ -1,10 +1,16 @@
 from functools import partial
-from inspect import Parameter, Signature
-from typing import Callable, Optional, TypeVar, Union
+from inspect import Parameter
+from inspect import Signature
+from typing import Callable
+from typing import Optional
+from typing import TypeVar
+from typing import Union
 
 from dependify.context import registry
-from dependify.decorators._injected._get_annotations import get_annotations
+from dependify.decorators import inject
 from dependify.dependency_registry import DependencyRegistry
+
+from ._get_annotations import get_annotations
 
 class_type = TypeVar("class_type", bound=type)
 

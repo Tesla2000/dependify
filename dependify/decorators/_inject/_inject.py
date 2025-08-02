@@ -1,8 +1,9 @@
 from functools import wraps
 
-from dependify import DependencyRegistry
 from dependify.context import registry
-from dependify.decorators._inject._get_existing_annot import get_existing_annot
+from dependify.dependency_registry import DependencyRegistry
+
+from ._get_existing_annot import get_existing_annot
 
 
 def inject(_func=None, *, registry_: DependencyRegistry = registry):

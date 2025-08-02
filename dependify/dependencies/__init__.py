@@ -2,4 +2,4 @@ __all__ = [
     "Dependency",
 ]
 
-from dependify import Dependency
+from ._dependency import Dependency

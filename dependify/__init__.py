@@ -30,9 +30,16 @@ C() # No need to pass in A and B since they are injected automatically
 ```
 """
 
-from dependify.context import dependencies, has, register, register_dependency, resolve
-from dependify.decorators import inject, injectable, injected, wired
-from dependify.dependencies._dependency import Dependency
+from dependify.context import dependencies
+from dependify.context import has
+from dependify.context import register
+from dependify.context import register_dependency
+from dependify.context import resolve
+from dependify.decorators import inject
+from dependify.decorators import injectable
+from dependify.decorators import injected
+from dependify.decorators import wired
+from dependify.dependencies import Dependency
 from dependify.dependency_registry import DependencyRegistry
 
 __all__ = [

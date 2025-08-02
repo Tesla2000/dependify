@@ -1,5 +1,8 @@
-from typing import Callable, Optional, TypeVar, Union, Type
-from dependify.context import registry, register
+from typing import Optional
+from typing import Type
+
+from dependify.context import register
+from dependify.context import registry
 from dependify.dependency_registry import DependencyRegistry
 
 
