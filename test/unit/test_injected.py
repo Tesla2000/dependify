@@ -3,6 +3,7 @@ from typing import Protocol
 from typing import runtime_checkable
 from unittest import TestCase
 
+from dependify import ConditionalResult
 from dependify import default_registry
 from dependify import injectable
 from dependify import injected
@@ -686,3 +687,74 @@ class TestInjected(TestCase):
             name: str
 
         CustomApp(name="Custom")
+
+    def test_injected_with_conditional_result(self):
+        """Test @injected with ConditionalResult for dynamic dependency injection"""
+        registry = DependencyRegistry()
+
+        @injectable(registry=registry)
+        class Application:
+            def __init__(self, role: str):
+                self.role = role
+
+        @injected(registry=registry)
+        class AdminService:
+            app: Application
+
+        @injected(registry=registry)
+        class UserService:
+            app: Application
+
+        @injected(registry=registry)
+        class GuestService:
+            app: Application
+
+        registry.register(
+            Application,
+            lambda: ConditionalResult(
+                Application("default"),
+                (
+                    (
+                        lambda instance: isinstance(instance, AdminService),
+                        Application("admin"),
+                    ),
+                    (
+                        lambda instance: isinstance(instance, UserService),
+                        Application("user"),
+                    ),
+                ),
+            ),
+        )
+        admin_service = AdminService()
+        self.assertEqual(admin_service.app.role, "admin")
+        admin_service = UserService()
+        self.assertEqual(admin_service.app.role, "user")
+        admin_service = GuestService()
+        self.assertEqual(admin_service.app.role, "default")
+
+    def test_injected_with_post_init(self):
+        """Test @injected with __post_init__ method"""
+        registry = DependencyRegistry()
+
+        @injected(registry=registry)
+        class ServiceWithPostInit:
+            def __init__(self, value: int = 10):
+                self.value = value
+                self.initialized = False
+                self.post_init_called = False
+
+            def __post_init__(self):
+                self.initialized = True
+                self.post_init_called = True
+                self.value *= 2
+
+        # Test that __post_init__ is called
+        instance = ServiceWithPostInit()
+        self.assertTrue(instance.initialized)
+        self.assertTrue(instance.post_init_called)
+        self.assertEqual(instance.value, 20)
+
+        # Test with custom value
+        instance2 = ServiceWithPostInit(5)
+        self.assertTrue(instance2.post_init_called)
+        self.assertEqual(instance2.value, 10)

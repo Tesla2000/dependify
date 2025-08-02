@@ -28,6 +28,14 @@ def injected(
     if class_ is None:
         return partial(injected, registry=registry, validate=validate)
     if "__init__" in class_.__dict__:
+        prev_init = class_.__init__
+
+        def __init__(self, *args, **kwargs) -> None:
+            prev_init(self, *args, **kwargs)
+            if hasattr(self, "__post_init__"):
+                self.__post_init__()
+
+        class_.__init__ = __init__
         return class_
     class_annotations = get_annotations(class_)
     annotations = tuple(class_annotations.items())
@@ -56,6 +64,8 @@ def injected(
                     f"Keyword argument: {field_name} already provided as a positional argument"
                 )
             field_type = class_annotations[field_name]
+            if isinstance(value, ConditionalResult):
+                value = value.resolve(self)
             if (
                 validate
                 and isinstance(field_type, type)
@@ -72,9 +82,6 @@ def injected(
                 missing_args.remove(field_name)
         if missing_args:
             raise TypeError(f"Missing arguments: {', '.join(missing_args)}")
-        for key, value in tuple(self.__dict__.items()):
-            if isinstance(value, ConditionalResult):
-                self.__dict__[key] = value.resolve(self)
         if hasattr(self, "__post_init__"):
             self.__post_init__()
 

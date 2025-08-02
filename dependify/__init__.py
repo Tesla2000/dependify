@@ -32,6 +32,7 @@ C() # No need to pass in A and B since they are injected automatically
 
 from dependify._conditional_result import ConditionalResult
 from dependify._dependency import Dependency
+from dependify.context import default_registry
 from dependify.context import dependencies
 from dependify.context import has
 from dependify.context import register
@@ -56,5 +57,6 @@ __all__ = [
     "has",
     "dependencies",
     "dependency_registry",
+    "default_registry",
     "ConditionalResult",
 ]
