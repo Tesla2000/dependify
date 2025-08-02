@@ -54,4 +54,5 @@ __all__ = [
     "resolve",
     "has",
     "dependencies",
+    "dependency_registry",
 ]

@@ -6,7 +6,7 @@ from typing import Optional
 from typing import TypeVar
 from typing import Union
 
-from dependify.context import registry
+from dependify.context import default_registry
 from dependify.decorators import inject
 from dependify.dependency_registry import DependencyRegistry
 
@@ -19,13 +19,13 @@ def injected(
     class_: Optional[class_type] = None,
     *,
     validate: bool = True,
-    registry_: DependencyRegistry = registry,
+    registry: DependencyRegistry = default_registry,
 ) -> Union[class_type, Callable[[class_type], class_type]]:
     """
     Decorator to create default constructor of a class it none present
     """
     if class_ is None:
-        return partial(injected, registry=registry_, validate=validate)
+        return partial(injected, registry=registry, validate=validate)
     if "__init__" in class_.__dict__:
         return class_
     class_annotations = get_annotations(class_)
@@ -82,5 +82,5 @@ def injected(
             for name, annotation in __init__.__annotations__.items()
         )
     )
-    class_.__init__ = inject(__init__, registry_=registry_)
+    class_.__init__ = inject(__init__, registry=registry)
     return class_
