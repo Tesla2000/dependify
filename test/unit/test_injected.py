@@ -3,7 +3,7 @@ from typing import Protocol
 from typing import runtime_checkable
 from unittest import TestCase
 
-from dependify import _registry
+from dependify import default_registry
 from dependify import injectable
 from dependify import injected
 from dependify.dependency_registry import DependencyRegistry
@@ -13,7 +13,7 @@ class TestInjected(TestCase):
     def setUp(self):
         """Reset the global registry before each test"""
         # Access the private attribute correctly with name mangling
-        _registry.clear()
+        default_registry.clear()
 
     def test_injected_basic_functionality(self):
         """Test basic @injected functionality with simple class"""
@@ -177,10 +177,8 @@ class TestInjected(TestCase):
         class InjectedChild(Base):
             y: str
 
-        # InjectedChild's generated __init__ only knows about 'y', not 'x' from parent
-        child2 = InjectedChild(y="test")
-        self.assertEqual(child2.y, "test")
-        # Note: child2 won't have 'x' because @injected doesn't look at parent annotations
+        with self.assertRaisesRegex(TypeError, "Missing arguments: x"):
+            InjectedChild(y="test")
 
     def test_injected_with_custom_registry(self):
         """Test @injected with custom registry"""
@@ -582,8 +580,7 @@ class TestInjected(TestCase):
         self.assertEqual(app.name, "TestApp")
 
     def test_injected_registry_isolation(self):
-        """Test that @injected with custom registrys maintains isolation"""
-        default_registry = _registry
+        """Test that @injected with custom registry's maintains isolation"""
         custom_registry = DependencyRegistry()
 
         # Register in default registry

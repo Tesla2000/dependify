@@ -1,8 +1,8 @@
 from typing import Optional
 from typing import Type
 
+from dependify.context import default_registry
 from dependify.context import register
-from dependify.context import registry
 from dependify.dependency_registry import DependencyRegistry
 
 
@@ -12,7 +12,7 @@ def injectable(
     patch: Optional[Type] = None,
     cached=False,
     autowire=True,
-    registry_: DependencyRegistry = registry,
+    registry: DependencyRegistry = default_registry,
 ):
     """
     Decorator to register a class as an injectable dependency.
@@ -24,9 +24,9 @@ def injectable(
 
     def decorator(func):
         if patch:
-            register(patch, func, cached, autowire, registry_)
+            register(patch, func, cached, autowire, registry)
         else:
-            register(func, None, cached, autowire, registry_)
+            register(func, None, cached, autowire, registry)
 
         return func
 
