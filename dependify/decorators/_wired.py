@@ -1,15 +1,16 @@
 from functools import partial
-from typing import Callable, Optional, TypeVar, Union
+from typing import Callable
+from typing import Optional
+from typing import TypeVar
+from typing import Union
 
 from dependify.context import registry
-from dependify.decorators._injectable import injectable
-from dependify.decorators._injected import injected
 from dependify.dependency_registry import DependencyRegistry
 
+from ._injectable import injectable
+from ._injected import injected
+
 class_type = TypeVar("class_type", bound=type)
-
-
-
 
 
 def wired(

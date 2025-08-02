@@ -1,7 +1,9 @@
 from inspect import signature
-from typing import Dict, Type
+from typing import Dict
+from typing import Type
+
 from dependify.context import registry
-from dependify import DependencyRegistry
+from dependify.dependency_registry import DependencyRegistry
 
 
 def get_existing_annot(

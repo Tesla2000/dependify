@@ -1,5 +1,3 @@
-__all__ = [
-    "inject"
-]
+__all__ = ["inject"]
 
-from dependify.decorators._inject._inject import inject
+from ._inject import inject

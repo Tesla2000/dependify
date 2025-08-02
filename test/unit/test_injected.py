@@ -1,9 +1,10 @@
 from inspect import signature
-from typing import Protocol, runtime_checkable
+from typing import Protocol
+from typing import runtime_checkable
 from unittest import TestCase
 
-from dependify import injectable
 from dependify import _registry
+from dependify import injectable
 from dependify import injected
 from dependify.dependency_registry import DependencyRegistry
 

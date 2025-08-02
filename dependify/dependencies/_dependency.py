@@ -1,4 +1,7 @@
-from typing import Any, Callable, Type, Union
+from typing import Any
+from typing import Callable
+from typing import Type
+from typing import Union
 
 
 class Dependency:

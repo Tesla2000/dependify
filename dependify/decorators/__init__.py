@@ -5,7 +5,7 @@ __all__ = [
     "injected",
 ]
 
-from dependify.decorators._inject import inject
-from dependify.decorators._injectable import injectable
-from dependify.decorators._injected import injected
-from dependify.decorators._wired import wired
+from ._inject import inject
+from ._injectable import injectable
+from ._injected import injected
+from ._wired import wired

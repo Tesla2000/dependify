@@ -1,8 +1,14 @@
+from collections.abc import Mapping
 from inspect import signature
 from types import MappingProxyType
-from typing import Any, Callable, Dict, Mapping, Optional, Type, Union
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import Optional
+from typing import Type
+from typing import Union
 
-from dependify.dependencies._dependency import Dependency
+from dependify.dependencies import Dependency
 
 
 class DependencyRegistry:

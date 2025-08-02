@@ -1,6 +1,9 @@
 import unittest
 
-from dependify import DependencyRegistry, has, inject, wired
+from dependify import DependencyRegistry
+from dependify import has
+from dependify import inject
+from dependify import wired
 
 
 class TestWired(unittest.TestCase):

@@ -1,6 +1,8 @@
-from typing import Callable, Type, Union
+from typing import Callable
+from typing import Type
+from typing import Union
 
-from dependify.dependencies._dependency import Dependency
+from dependify.dependencies import Dependency
 from dependify.dependency_registry import DependencyRegistry
 
 registry = DependencyRegistry()
