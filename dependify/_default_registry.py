@@ -3,7 +3,7 @@ from typing import Type
 from typing import Union
 
 from dependify._dependency import Dependency
-from dependify.dependency_registry import DependencyRegistry
+from dependify._dependency_registry import DependencyRegistry
 
 default_registry = DependencyRegistry()
 
@@ -44,7 +44,7 @@ def has(name: Type):
     """
     Checks if a dependency with the specified name exists.
     """
-    return default_registry.has(name)
+    return name in default_registry
 
 
 def dependencies():

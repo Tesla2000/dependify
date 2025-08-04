@@ -4,8 +4,8 @@ from typing import Optional
 from typing import TypeVar
 from typing import Union
 
-from dependify.context import default_registry
-from dependify.dependency_registry import DependencyRegistry
+from dependify._default_registry import default_registry
+from dependify._dependency_registry import DependencyRegistry
 
 from ._injectable import injectable
 from ._injected import injected

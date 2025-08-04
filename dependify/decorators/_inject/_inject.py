@@ -1,7 +1,7 @@
 from functools import wraps
 
-from dependify.context import default_registry
-from dependify.dependency_registry import DependencyRegistry
+from dependify._default_registry import default_registry
+from dependify._dependency_registry import DependencyRegistry
 
 from ._get_existing_annot import get_existing_annot
 

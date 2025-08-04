@@ -5,6 +5,7 @@ from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import Optional
+from typing import Self
 from typing import Type
 from typing import Union
 
@@ -19,7 +20,7 @@ class DependencyRegistry:
     It allows you to register dependencies by name and resolve them when needed.
 
     Attributes:
-        dependencies (Dict[Type, Dependency]): A dictionary that stores the registered dependencies.
+        _dependencies (Dict[Type, Dependency]): A dictionary that stores the registered dependencies.
 
     Methods:
         __init__(self, dependencies: Dict[str, Dependency]): Initializes a new instance of the `Container` class.
@@ -97,23 +98,15 @@ class DependencyRegistry:
 
         return dependency.resolve(**kwargs)
 
-    def has(self, name: Type) -> bool:
-        """
-        Checks if the registry has a dependency with the specified name.
-
-        Args:
-            name (Type): The name of the dependency.
-
-        Returns:
-            bool: True if the registry has the dependency, False otherwise.
-        """
-        return name in self._dependencies
-
+    @property
     def dependencies(self) -> Mapping[Type, Dependency]:
         """
         Returns a read-only view of the registry's dependencies.
         """
         return MappingProxyType(self._dependencies)
+
+    def __contains__(self, name: Type) -> bool:
+        return name in self._dependencies
 
     def clear(self):
         self._dependencies = {}
@@ -124,5 +117,19 @@ class DependencyRegistry:
                 f"Only {DependencyRegistry.__name__} can be added to {type(self).__name__}"
             )
         return type(self)(
-            dependencies={**other.dependencies(), **self.dependencies()}
+            dependencies={**other.dependencies, **self.dependencies}
         )
+
+    def __enter__(self) -> Self:
+        self._dep_cp = self._dependencies.copy()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[object],
+    ) -> bool:
+        self._dependencies = self._dep_cp
+        del self._dep_cp
+        return False

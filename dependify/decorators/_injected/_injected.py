@@ -7,9 +7,9 @@ from typing import TypeVar
 from typing import Union
 
 from dependify._conditional_result import ConditionalResult
-from dependify.context import default_registry
+from dependify._default_registry import default_registry
+from dependify._dependency_registry import DependencyRegistry
 from dependify.decorators import inject
-from dependify.dependency_registry import DependencyRegistry
 
 from ._get_annotations import get_annotations
 
