@@ -17,7 +17,7 @@ class TestInjectable(TestCase):
             pass
 
         # Should be registered in custom registry
-        self.assertTrue(registry.has(A))
+        self.assertTrue(A in registry)
         # Should not be in default registry
         self.assertFalse(has(A))
         # Should resolve correctly
@@ -139,9 +139,9 @@ class TestInjectable(TestCase):
                 self.b = b
 
         # All should be registered
-        self.assertTrue(registry.has(ServiceA))
-        self.assertTrue(registry.has(ServiceB))
-        self.assertTrue(registry.has(ServiceC))
+        self.assertTrue(ServiceA in registry)
+        self.assertTrue(ServiceB in registry)
+        self.assertTrue(ServiceC in registry)
 
         # Should resolve with dependencies
         c_instance = registry.resolve(ServiceC)
@@ -162,7 +162,7 @@ class TestInjectable(TestCase):
             return ServiceFromFactory(42)
 
         # Factory should be registered
-        self.assertTrue(registry.has(service_factory))
+        self.assertTrue(service_factory in registry)
 
         # Should resolve to factory result
         instance = registry.resolve(service_factory)

@@ -31,18 +31,18 @@ C() # No need to pass in A and B since they are injected automatically
 """
 
 from dependify._conditional_result import ConditionalResult
+from dependify._default_registry import default_registry
+from dependify._default_registry import dependencies
+from dependify._default_registry import has
+from dependify._default_registry import register
+from dependify._default_registry import register_dependency
+from dependify._default_registry import resolve
 from dependify._dependency import Dependency
-from dependify.context import default_registry
-from dependify.context import dependencies
-from dependify.context import has
-from dependify.context import register
-from dependify.context import register_dependency
-from dependify.context import resolve
+from dependify._dependency_registry import DependencyRegistry
 from dependify.decorators import inject
 from dependify.decorators import injectable
 from dependify.decorators import injected
 from dependify.decorators import wired
-from dependify.dependency_registry import DependencyRegistry
 
 __all__ = [
     "Dependency",
@@ -56,7 +56,7 @@ __all__ = [
     "resolve",
     "has",
     "dependencies",
-    "dependency_registry",
+    "_dependency_registry.py",
     "default_registry",
     "ConditionalResult",
 ]

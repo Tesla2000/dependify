@@ -2,8 +2,8 @@ from inspect import signature
 from typing import Dict
 from typing import Type
 
-from dependify.context import default_registry
-from dependify.dependency_registry import DependencyRegistry
+from dependify._default_registry import default_registry
+from dependify._dependency_registry import DependencyRegistry
 
 
 def get_existing_annot(
@@ -19,7 +19,7 @@ def get_existing_annot(
         if parameter.default != parameter.empty:
             continue
 
-        if registry.has(parameter.annotation):
+        if parameter.annotation in registry:
             existing_annot[name] = parameter.annotation
 
     return existing_annot

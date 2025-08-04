@@ -7,7 +7,7 @@ from dependify import ConditionalResult
 from dependify import default_registry
 from dependify import injectable
 from dependify import injected
-from dependify.dependency_registry import DependencyRegistry
+from dependify._dependency_registry import DependencyRegistry
 
 
 class TestInjected(TestCase):
@@ -540,9 +540,9 @@ class TestInjected(TestCase):
         self.assertEqual(app2.version, "2.0")
 
         # Service1 should not be available in registry2
-        self.assertFalse(registry2.has(Service1))
+        self.assertFalse(Service1 in registry2)
         # Service2 should not be available in registry1
-        self.assertFalse(registry1.has(Service2))
+        self.assertFalse(Service2 in registry1)
 
     def test_injected_with_dependencies_from_different_registrys(self):
         """Test @injected with dependencies registered in different registrys"""
@@ -631,8 +631,8 @@ class TestInjected(TestCase):
         self.assertEqual(custom_app.name, "Custom")
 
         # Verify isolation - CustomService should not be in default registry
-        self.assertFalse(default_registry.has(CustomService))
-        self.assertTrue(custom_registry.has(CustomService))
+        self.assertFalse(CustomService in default_registry)
+        self.assertTrue(CustomService in custom_registry)
 
     def test_injected_registry_isolation_wrong_type(self):
         custom_registry = DependencyRegistry()

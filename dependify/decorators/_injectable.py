@@ -1,9 +1,9 @@
 from typing import Optional
 from typing import Type
 
-from dependify.context import default_registry
-from dependify.context import register
-from dependify.dependency_registry import DependencyRegistry
+from dependify._default_registry import default_registry
+from dependify._default_registry import register
+from dependify._dependency_registry import DependencyRegistry
 
 
 def injectable(

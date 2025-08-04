@@ -15,7 +15,7 @@ class TestContainer(TestCase):
 
         registry = DependencyRegistry()
         registry.register(A)
-        self.assertTrue(registry.has(A))
+        self.assertTrue(A in registry)
 
     def test_registry_register_function(self):
         """
@@ -30,7 +30,7 @@ class TestContainer(TestCase):
             return A()
 
         registry.register(A, func)
-        self.assertTrue(registry.has(A))
+        self.assertTrue(A in registry)
 
     def test_registry_resolve(self):
         """
