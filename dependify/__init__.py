@@ -56,7 +56,6 @@ __all__ = [
     "resolve",
     "has",
     "dependencies",
-    "_dependency_registry.py",
     "default_registry",
     "ConditionalResult",
 ]
