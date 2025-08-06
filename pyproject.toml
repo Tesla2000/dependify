@@ -20,5 +20,6 @@ Homepage = "https://github.com/KennethUlloa/dependify"
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["dependify"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dependify*"]
