@@ -31,6 +31,7 @@ class DependencyRegistry:
     """
 
     _dependencies: Dict[Type, Dependency]
+    _dep_cp: list[Dict[Type, Dependency]]
 
     def __init__(self, dependencies: Optional[Dict[Type, Dependency]] = None):
         """
@@ -40,6 +41,7 @@ class DependencyRegistry:
             dependencies (Dict[Type, Dependency], optional): A dictionary of dependencies to be registered. Defaults to an empty dictionary.
         """
         self._dependencies = dependencies or {}
+        self._dep_cp = []
 
     def register_dependency(self, name: Type, dependency: Dependency) -> None:
         """
@@ -121,7 +123,7 @@ class DependencyRegistry:
         )
 
     def __enter__(self) -> Self:
-        self._dep_cp = self._dependencies.copy()
+        self._dep_cp.append(self._dependencies.copy())
         return self
 
     def __exit__(
@@ -130,6 +132,5 @@ class DependencyRegistry:
         exc_val: Optional[BaseException],
         exc_tb: Optional[object],
     ) -> bool:
-        self._dependencies = self._dep_cp
-        del self._dep_cp
+        self._dependencies = self._dep_cp.pop()
         return False
