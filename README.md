@@ -1,393 +1,634 @@
-<div style="display: flex; justify-content: center">
-    <img src="https://github.com/KennethUlloa/dependify/raw/main/images/dependify.svg" width="80%">
-</div>
-
 # Dependify
-Dependify is a library that aims to reduce the effort that comes with the manual handling of dependency injection by automating as much as it can. 
 
-### The problem
-Imagine that you have some class that requires some functions provided by other classes. If you have to instantiate manually all the dependencies in multiple places, it might get messy really quick. 
-```python
-# Your classes with good coding practices ;)
-class A:
-    def __init__(self):
-        pass
+A powerful and flexible dependency injection framework for Python that makes managing dependencies simple and intuitive.
 
-class B:
-    def __init__(self, a: A):
-        self.a = A
+## Table of Contents
 
-class C:
-    def __init__(self, b: B):
-        self.b = B
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [The @wired Decorator](#the-wired-decorator)
+  - [Basic Usage](#basic-usage)
+  - [Dependency Injection](#dependency-injection)
+  - [Caching (Singleton Pattern)](#caching-singleton-pattern)
+  - [Patching Dependencies](#patching-dependencies)
+  - [Custom Registries](#custom-registries)
+- [Context Managers](#context-managers)
+- [Advanced Examples](#advanced-examples)
+  - [Complex Service Architecture](#complex-service-architecture)
+  - [Testing with Mocks](#testing-with-mocks)
+  - [Conditional Dependencies](#conditional-dependencies)
+- [API Reference](#api-reference)
 
-# But then, the hell...
-def use_a():
-    a = A()
-    # do something with A
+## Installation
 
-def use_b():
-    a = A()
-    b = B(a)
-    # do something with B
-
-def use_c():
-    a = A()
-    b = B(a)
-    c = C(b)
-    # do something with C
-```
-When you want to decouple the classes from direct references (like dependency instantiation inside of a constructor) you use arguments to separate the use from the creation (dependency injection principle).
-
-This make your code easier to scale, grow and its a strong step in the direction of using **SOLID** principles in your code.
-
-The problems comes when each dependency has its own dependencies.
-
-You can instantiate each of them by yourself as seen in the example. But your code will become more complex and so the classes. To use an specific dependency you have to handle its dependencies and this will force you to remember every dependency's dependencies.
-
-Your first approach might be to define some module that contains all dependency creation logic.
-```python
-from a_module import A, A1
-from b_module import B, B1
-from c_module import C, C1
-from d_module import D, D1
-
-
-def create_a():
-    return A()
-
-def create_a1():
-    return A1()
-
-def create_b():
-    return B(create_a())
-
-def create_b1():
-    return B1(create_a1())
-
-def create_c():
-    return C(create_b())
-
-def create_d():
-    return D(create_a(), create_b1())
-
-# And so on...
-```
-Then you'll have any sort of combinations of dependencies that will be hard to track or modify. 
-
-Dependify offers to take this bullet for you by automatically instantiating and wiring up dependencies so you can focus on creating value with your solution.
-
-## Usage
-#### Installation
-```shell
+```bash
 pip install dependify
 ```
-#### Build from source
-Prepare the environment
-```shell
-git clone https://github.com/KennethUlloa/dependify
-cd dependify
-python -m venv .venv
-```
-Installation
-```bash
-pip install .
-```
-or build the wheel, this example will be using `build` library.
-```bash
-python -m build
-```
-Then the result will be located in the dist folder created during building.
-#### Out of the box usage
-```python
-from dependify import injectable, inject
 
-# Register a class as a dependency with 'injectable' decorator
-@injectable
-class SomeDependency:
+## Quick Start
+
+```python
+from dependify import wired
+
+@wired
+class EmailService:
+    def send(self, message: str):
+        return f"Sending: {message}"
+
+@wired
+class NotificationService:
+    email_service: EmailService
+    
+    def notify(self, user: str, message: str):
+        return self.email_service.send(f"Hello {user}, {message}")
+
+# Dependencies are automatically injected
+service = NotificationService()
+print(service.notify("Alice", "Welcome!"))
+# Output: Sending: Hello Alice, Welcome!
+```
+
+## The @wired Decorator
+
+The `@wired` decorator is the heart of Dependify. It combines the functionality of `@injectable` and `@injected`, automatically registering classes for dependency injection and generating constructors with dependency resolution.
+
+### Basic Usage
+
+The `@wired` decorator automatically handles dependency injection based on type annotations:
+
+```python
+from dependify import wired
+
+@wired
+class DatabaseConnection:
+    def connect(self):
+        return "Connected to database"
+
+@wired
+class UserRepository:
+    db: DatabaseConnection  # Will be automatically injected
+    
+    def get_user(self, id: int):
+        connection_status = self.db.connect()
+        return f"User {id} fetched ({connection_status})"
+
+# No need to manually inject dependencies
+repo = UserRepository()
+print(repo.get_user(123))
+# Output: User 123 fetched (Connected to database)
+```
+
+### Dependency Injection
+
+The `@wired` decorator automatically injects dependencies for annotated class attributes:
+
+```python
+@wired
+class Logger:
+    def log(self, message: str):
+        print(f"[LOG] {message}")
+
+@wired
+class Cache:
+    def get(self, key: str):
+        return f"cached_{key}"
+
+@wired
+class ApiService:
+    logger: Logger      # Automatically injected
+    cache: Cache        # Automatically injected
+    api_key: str        # Must be provided manually
+    
+    def fetch_data(self, endpoint: str):
+        self.logger.log(f"Fetching from {endpoint}")
+        cached = self.cache.get(endpoint)
+        return f"Data from {endpoint}: {cached}"
+
+# Only need to provide non-injectable parameters
+service = ApiService(api_key="secret123")
+print(service.fetch_data("/users"))
+# Output: [LOG] Fetching from /users
+#         Data from /users: cached_/users
+```
+
+### Multiple Dependencies
+
+```python
+@wired
+class ServiceA:
+    def get_a(self):
+        return "A"
+
+@wired
+class ServiceB:
+    def get_b(self):
+        return "B"
+
+@wired
+class ServiceC:
+    def get_c(self):
+        return "C"
+
+@wired
+class Orchestrator:
+    service_a: ServiceA
+    service_b: ServiceB
+    service_c: ServiceC
+    
+    def combine(self):
+        return f"{self.service_a.get_a()}-{self.service_b.get_b()}-{self.service_c.get_c()}"
+
+orchestrator = Orchestrator()
+print(orchestrator.combine())  # Output: A-B-C
+```
+
+### Caching (Singleton Pattern)
+
+Use `cached=True` to implement singleton behavior:
+
+```python
+@wired(cached=True)
+class ConfigurationService:
     def __init__(self):
-        pass
+        self.id = id(self)  # Unique identifier for each instance
+        self.settings = {"theme": "dark", "language": "en"}
 
-class SomeDependantClass:
-    # Decorate a callable to inject the dependencies
-    @inject
-    def __init__(self, some_dependency: SomeDependency):
-        self.some_dependency = some_dependency
+@wired
+class ComponentA:
+    config: ConfigurationService
 
-# Instantiation
-# No need to pass arguments since they are being handled by dependify
-dependant = SomeDependantClass()
-```
-All dependencies are stored globally, meaning they will be accessible through all the code as long the registration happends before usage.
+@wired
+class ComponentB:
+    config: ConfigurationService
 
-You can register a dependency for a type using the same type or passing a different type/callable using the `patch` keyword argument.
-```python
-# Register an interface for injection
-# interface definition: abc or protocols
-from dependify import injectable, inject
+# Both components share the same configuration instance
+comp_a = ComponentA()
+comp_b = ComponentB()
 
+print(comp_a.config.id == comp_b.config.id)  # True - same instance
+print(comp_a.config.settings == comp_b.config.settings)  # True
 
-class IService(ABC):
-    @abstractmethod
-    def method(self):
-        pass
-
-
-# Register ServiceImpl to be injected instead of IService
-@injectable(patch=IService)
-class ServiceImpl(IService):
-    # Class implementation
-    def method(self):
-        # Some implementation
-
-
-# usage of service
-@inject
-def do_something_with_service(service: IService):
-    service.method()
-```
-
-You're not limited to classes to define dependencies, callables also can be registered as dependencies for a type.
-```python
-from dependify import injectable, inject
-
-# Some classes dependencies might need a complex setting up process 
-# that can't be put as a dependency due some factors 
-# (standard types dependencies for example).
-class DatabaseHandler:
-    # The following init method needs a string but
-    # it will be a non-sense to register 'str' type as a
-    # dependency
-    def __init__(self, str_con: str):
-        ...
-    
-    def get_clients(self) -> list:
-        ...
-
-
-# Here we define a pre initialization process and
-# mark the dependency as 'cached' so it will be 
-# instantiated once and it will save the object to
-# future calls. Same result could be achieved with
-# @cached. But the goal of the decorator is to reduce
-# redundant decorators related to usage.
-@injectable(patch=DatabaseHandler, cached=True)
-def create_db_handler():
-    import os
-    return DatabaseHandler(os.getenv('DB_CONN_STR'))
-
-@inject
-def get_clients_from_db(db_handler: DatabaseHandler):
-    clients = db_handler.get_clients()
-    # Do something else with result
-```
-In the previous example you were able to use a predefined process to create an specific dependency. Notice that you must use the `patch` keyword when decorating functions since all functions have the same type always.
-##### External register
-If for some reason you don't want to anotate your classes (you are using a clean architecture for example), then you can register your classes and callables using the `register` function.
-
-```python
-# use case file
-from core.users.repository import IUserRepository
-
-
-class ListUsersUseCase:
-    def __init__(self, repository: IUserRepository):
-        self.repository = repository
-    
-    def execute(self) -> list[User]:
-        return self.repository.find_all()
-
-# config file
-from dependify import register
-from core.users.usecases import ListUsersUseCase
-
-register(ListUsersUseCase)
-
-# controller file (flask in this example)
-import config # You make sure that registration happends
-from flask import Flask
-from dependify import inject
-from core.users.usecases import ListUsersUseCase
-
-
-app = Flask(__name__)
-
-
-@app.get('/users')
-@inject
-def get_all_users(
-    use_case: ListUsersUseCase
-):
-    users = use_case.execute()
-    # Serialization to json
-    return serialized_users
-
-```
-
-#### Localized dependencies
-In the backstage Dependify uses a global `Container` object to hold all dependencies. But you can also use your own. The `inject` decorator has an optional keyword called `container` so you can use localized injection with different dependencies for the same type. It means you can have localized dependencies that doesn't crash with global dependencies.
-```python
-from dependify import Container, inject, register
-
-class SomeClass:
-    pass
-
-my_container = Container()
-my_container.register(SomeClass)
-
-# If we declare a function and decorate it with 'inject' 
-# it won't work and instead raise an exception. 
-# This is because the global 'Container' it's not aware 
-# of the SomeClass type.
-@inject
-def use_some_class(some_class: SomeClass):
-    pass
-
-# Now if we use the 'container' keyword, it won't fail
-# and continue the normal flow.
-@inject(container=my_container)
-def use_some_class(some_class: SomeClass):
-    pass
-```
-
-#### Flags
-Either in `Dependency` constructor or in `register` method can specify the following flags to modify the injection behaviour for a dependency.
-- `cache` determines whether to store the result of the first call of the dependency. Defaults to `False`.
-- `autowire` determines whether to autowire the arguments declared in the dependency. This feature allows you to decide how to initialize internal dependencies if set to `False`. Defaults to `True`.
-```python
-# Cached instance example
-from dependify import register, inject
-
-class HelloPrinter:
+# Without caching, each injection creates a new instance
+@wired(cached=False)
+class NonCachedService:
     def __init__(self):
-        self.last = None
-    
-    def say_hello(self, name: str):
-        print("Before I said hi to", self.last)
-        print(f"Hello {name}")
-        self.last = name
+        self.id = id(self)
 
-# register your class as a cached dependency 
-register(HelloPrinter, cache=True)
+@wired
+class ClientA:
+    service: NonCachedService
 
-# inject the dependency in the place you need (has to be a callable)
-@inject
-def hello_dev(printer: HelloPrinter):
-    printer.say_hello("Developer")
+@wired
+class ClientB:
+    service: NonCachedService
 
-# reuse the object
-@inject
-def hello_po(printer: HelloPrinter):
-    printer.say_hello("Product Owner")
- 
-hello_dev()
-hello_po()
+client_a = ClientA()
+client_b = ClientB()
+print(client_a.service.id == client_b.service.id)  # False - different instances
 ```
-Since we are sharing the `HelloPrinter` instance between functions, any change made to it will be accessible by the next function and so on. In this example we are storing the last name that was passed to the `say_hello` method.
 
-The output  would look similar to this
-```
-Before I said hi to None
-Hello Developer
-Before I said hi to Developer
-Hello Product Owner
-```
-Even though the dependency was instantiated out of scene, we are using the same instace throughout the program. 
+### Patching Dependencies
 
-This could be useful when we have a dependency that must store its state like a database connection or some api client whose instantiation is resource-costly.
+Use the `patch` parameter to replace existing dependencies (useful for testing):
 
-#### The catch
-Sadly, anything in life is perfect. Dependify is not the exception. 
-
-If you want to use the decorators you are tied to use injection in callables only if you want to keep your domain clean from any dependency.
 ```python
-from dependify import injectable, inject
+from dependify import wired, inject
 
-@injectable
-class A:
-    pass
+class ProductionDatabase:
+    def query(self, sql: str):
+        return f"Production result for: {sql}"
 
-@injectable
-class B:
-    def __init__(self, b: B):
-        self.b = B
+@wired(patch=ProductionDatabase)
+class TestDatabase:
+    def query(self, sql: str):
+        return f"Test mock result for: {sql}"
 
-# Bad use
-def main():
-    b = B() # this will break since it is specting an instance of A
-
-# Working code
-@inject
-def main(b: B):
-    # do something with B
-``` 
-If you don't need (or want) to use decorators, you can use the function-based way.
-```python
-from dependify import register, resolve
-
-class A:
-    pass
-
-class B:
-    def __init__(self, b: B):
-        self.b = B
-
-register(A)
-register(B)
-
-# This will work since you are calling the resolve 
-# logic insted of direct instantiation, so 
-# dependify will handle all registered 
-# dependencies
-def main():
-    b = resolve(B)
-    # Do something with B
-```
-The good news are that you can mix both ways of using the registration/injection logic. 
-```python
-from dependify import injectable, inject, register, resolve
-
-# Register A with decorator
-@injectable
-class A:
-    pass
-
-class B:
-    def __init__(self, b: B):
-        self.b = B
-
-# Register B with function
-register(B)
-
-
-# Inject B with decorator
-@inject
-def main(b: B):
-    # Do something with B
-
-# Inject A with function
-def main2():
-    a = resolve(A)
-```
-If your classes can be decorated then the usage of a dependant class becomes much easier.
-```python
-from dependify import injectable, inject
-
-@injectable
-class A:
-    pass
-
-@injectable
-class B:
-    pass
-
-
-class C:
+class DataService:
     @inject
-    def __init__(self, a: A, b: B):
-        pass
+    def __init__(self, db: ProductionDatabase):
+        self.db = db
+    
+    def get_users(self):
+        return self.db.query("SELECT * FROM users")
 
-# This will work since the constructor is decorated and 
-# its dependencies are automatically resolved.
-c = C() 
+# The TestDatabase will be injected instead of ProductionDatabase
+service = DataService()
+print(service.get_users())
+# Output: Test mock result for: SELECT * FROM users
 ```
+
+### Custom Registries
+
+Isolate dependencies using custom registries:
+
+```python
+from dependify import DependencyRegistry, wired
+
+# Create separate registries for different modules
+auth_registry = DependencyRegistry()
+payment_registry = DependencyRegistry()
+
+# Authentication module
+@wired(registry=auth_registry)
+class TokenService:
+    def generate_token(self):
+        return "auth_token_xyz"
+
+@wired(registry=auth_registry)
+class AuthenticationService:
+    token_service: TokenService
+    
+    def authenticate(self, username: str):
+        token = self.token_service.generate_token()
+        return f"User {username} authenticated with {token}"
+
+# Payment module
+@wired(registry=payment_registry)
+class PaymentGateway:
+    def process(self, amount: float):
+        return f"Processing ${amount}"
+
+@wired(registry=payment_registry)
+class PaymentService:
+    gateway: PaymentGateway
+    
+    def charge(self, user: str, amount: float):
+        result = self.gateway.process(amount)
+        return f"Charging {user}: {result}"
+
+# Each registry maintains its own isolated dependencies
+auth_service = AuthenticationService()
+payment_service = PaymentService()
+
+print(auth_service.authenticate("alice"))
+# Output: User alice authenticated with auth_token_xyz
+
+print(payment_service.charge("alice", 99.99))
+# Output: Charging alice: Processing $99.99
+```
+
+## Context Managers
+
+Use context managers to temporarily modify dependency registrations:
+
+```python
+from dependify import DependencyRegistry, injectable
+
+registry = DependencyRegistry()
+
+@injectable(registry=registry)
+class PermanentService:
+    def get_name(self):
+        return "permanent"
+
+# Permanent registration
+print(PermanentService in registry)  # True
+
+# Temporary registration within context
+with registry:
+    @injectable(registry=registry)
+    class TemporaryService:
+        def get_name(self):
+            return "temporary"
+    
+    print(TemporaryService in registry)  # True
+    
+    # Nested context for even more temporary registrations
+    with registry:
+        @injectable(registry=registry)
+        class VeryTemporaryService:
+            def get_name(self):
+                return "very temporary"
+        
+        print(VeryTemporaryService in registry)  # True
+    
+    # VeryTemporaryService is gone after inner context
+    print(VeryTemporaryService in registry)  # False
+    print(TemporaryService in registry)  # Still True
+
+# TemporaryService is gone after outer context
+print(TemporaryService in registry)  # False
+print(PermanentService in registry)  # Still True
+```
+
+### Practical Context Manager Example
+
+```python
+from dependify import DependencyRegistry, wired
+
+# Production configuration
+prod_registry = DependencyRegistry()
+
+@wired(registry=prod_registry)
+class EmailService:
+    def send(self, to: str, message: str):
+        # In production, actually send email
+        return f"Email sent to {to}: {message}"
+
+@wired(registry=prod_registry)
+class NotificationSystem:
+    email: EmailService
+    
+    def notify_user(self, user: str, message: str):
+        return self.email.send(user, message)
+
+# Testing with temporary mock
+with prod_registry:
+    @wired(registry=prod_registry, patch=EmailService)
+    class MockEmailService:
+        def send(self, to: str, message: str):
+            return f"[MOCK] Email to {to}: {message}"
+    
+    # Within context, mock is used
+    notifier = NotificationSystem()
+    result = notifier.notify_user("test@example.com", "Test message")
+    print(result)  # [MOCK] Email to test@example.com: Test message
+
+# Outside context, production service is used
+notifier = NotificationSystem()
+result = notifier.notify_user("user@example.com", "Real message")
+print(result)  # Email sent to user@example.com: Real message
+```
+
+## Advanced Examples
+
+### Complex Service Architecture
+
+```python
+from dependify import wired
+from typing import List, Dict
+
+@wired(cached=True)
+class ConfigService:
+    def __init__(self):
+        self.config = {
+            "db_host": "localhost",
+            "db_port": 5432,
+            "cache_ttl": 300
+        }
+    
+    def get(self, key: str):
+        return self.config.get(key)
+
+@wired
+class DatabaseService:
+    config: ConfigService
+    
+    def connect(self):
+        host = self.config.get("db_host")
+        port = self.config.get("db_port")
+        return f"Connected to {host}:{port}"
+
+@wired(cached=True)
+class CacheService:
+    config: ConfigService
+    
+    def __init__(self):
+        self.cache: Dict[str, any] = {}
+    
+    def get(self, key: str):
+        return self.cache.get(key)
+    
+    def set(self, key: str, value: any):
+        ttl = self.config.get("cache_ttl")
+        self.cache[key] = value
+        return f"Cached with TTL: {ttl}s"
+
+@wired
+class UserService:
+    db: DatabaseService
+    cache: CacheService
+    
+    def get_user(self, user_id: int):
+        # Check cache first
+        cached_user = self.cache.get(f"user_{user_id}")
+        if cached_user:
+            return f"From cache: {cached_user}"
+        
+        # Fetch from database
+        self.db.connect()
+        user = f"User#{user_id}"
+        self.cache.set(f"user_{user_id}", user)
+        return f"From database: {user}"
+
+# Usage
+service = UserService()
+print(service.get_user(1))  # From database: User#1
+print(service.get_user(1))  # From cache: User#1
+```
+
+### Testing with Mocks
+
+```python
+from dependify import DependencyRegistry, wired
+
+def create_test_environment():
+    test_registry = DependencyRegistry()
+    
+    @wired(registry=test_registry)
+    class MockDatabase:
+        def __init__(self):
+            self.queries = []
+        
+        def execute(self, query: str):
+            self.queries.append(query)
+            return f"Mock result for: {query}"
+    
+    @wired(registry=test_registry)
+    class MockCache:
+        def __init__(self):
+            self.data = {"test_key": "test_value"}
+        
+        def get(self, key: str):
+            return self.data.get(key, "not_found")
+    
+    @wired(registry=test_registry)
+    class ServiceUnderTest:
+        db: MockDatabase
+        cache: MockCache
+        
+        def process(self, key: str):
+            cached = self.cache.get(key)
+            if cached != "not_found":
+                return f"Cached: {cached}"
+            
+            result = self.db.execute(f"SELECT * FROM table WHERE key='{key}'")
+            return f"Database: {result}"
+    
+    return ServiceUnderTest, test_registry
+
+# Run tests
+ServiceClass, registry = create_test_environment()
+service = ServiceClass()
+
+# Test with cached data
+print(service.process("test_key"))  # Cached: test_value
+
+# Test with database query
+print(service.process("new_key"))   # Database: Mock result for: SELECT * FROM table WHERE key='new_key'
+
+# Verify mock was called
+print(service.db.queries)  # ["SELECT * FROM table WHERE key='new_key'"]
+```
+
+### Conditional Dependencies
+
+```python
+from dependify import wired, ConditionalResult, DependencyRegistry, injectable
+
+registry = DependencyRegistry()
+
+@injectable(registry=registry)
+class BaseLogger:
+    def __init__(self, level: str):
+        self.level = level
+    
+    def log(self, message: str):
+        return f"[{self.level}] {message}"
+
+@wired(registry=registry)
+class ProductionService:
+    logger: BaseLogger
+    service_type: str = "production"
+
+@wired(registry=registry)
+class DevelopmentService:
+    logger: BaseLogger
+    service_type: str = "development"
+
+@wired(registry=registry)
+class TestService:
+    logger: BaseLogger
+    service_type: str = "test"
+
+# Register conditional logger that provides different instances based on context
+registry.register(
+    BaseLogger,
+    lambda: ConditionalResult(
+        BaseLogger("INFO"),  # Default
+        (
+            (lambda instance: isinstance(instance, ProductionService), BaseLogger("ERROR")),
+            (lambda instance: isinstance(instance, DevelopmentService), BaseLogger("DEBUG")),
+            (lambda instance: isinstance(instance, TestService), BaseLogger("TRACE")),
+        )
+    )
+)
+
+# Each service gets appropriate logger
+prod = ProductionService()
+dev = DevelopmentService()
+test = TestService()
+
+print(prod.logger.log("Production message"))  # [ERROR] Production message
+print(dev.logger.log("Dev message"))         # [DEBUG] Dev message
+print(test.logger.log("Test message"))       # [TRACE] Test message
+```
+
+### Working with Existing `__init__` Methods
+
+The `@wired` decorator preserves existing `__init__` methods:
+
+```python
+@wired
+class CustomInitService:
+    def __init__(self):
+        self.initialized = True
+        self.counter = 0
+        self.data = []
+    
+    def increment(self):
+        self.counter += 1
+        return self.counter
+
+service = CustomInitService()
+print(service.initialized)  # True
+print(service.increment())  # 1
+print(service.increment())  # 2
+```
+
+### Handling Circular Dependencies
+
+Be aware that circular dependencies will raise an error:
+
+```python
+@wired
+class ServiceA:
+    b: "ServiceB"  # Forward reference
+
+@wired
+class ServiceB:
+    a: ServiceA
+
+# This will raise TypeError due to circular dependency
+try:
+    ServiceA()
+except TypeError as e:
+    print(f"Error: {e}")
+    # Error: __init__() missing required positional arguments
+```
+
+## API Reference
+
+### `@wired` Decorator
+
+```python
+def wired(
+    class_: Optional[Type] = None,
+    *,
+    patch: Optional[Type] = None,
+    cached: bool = False,
+    autowire: bool = True,
+    validate: bool = True,
+    registry: DependencyRegistry = default_registry
+) -> Union[Type, Callable[[Type], Type]]
+```
+
+**Parameters:**
+- `class_`: The class to decorate (automatically provided)
+- `patch`: Replace this type in the registry
+- `cached`: If True, creates singleton instances
+- `autowire`: If True, automatically inject dependencies
+- `validate`: If True, validate type annotations
+- `registry`: The dependency registry to use
+
+### `DependencyRegistry`
+
+```python
+class DependencyRegistry:
+    def register(self, name: Type, target: Optional[Union[Type, Callable]] = None, 
+                 cached: bool = False, autowired: bool = True) -> None
+    def resolve(self, name: Type) -> Any
+    def __contains__(self, name: Type) -> bool
+    def clear(self) -> None
+```
+
+**Context Manager Support:**
+```python
+with registry:
+    # Temporary registrations
+    pass
+# Registrations are reverted here
+```
+
+### Other Decorators
+
+- `@injectable`: Register a class for dependency injection
+- `@injected`: Auto-generate constructor with dependency injection
+- `@inject`: Inject dependencies into a specific method
+
+## Best Practices
+
+1. **Use `@wired` for most cases** - It combines registration and injection
+2. **Use custom registries** for module isolation and testing
+3. **Use `cached=True`** for shared services and configuration
+4. **Use context managers** for temporary overrides in tests
+5. **Avoid circular dependencies** by restructuring your architecture
+6. **Type annotate all dependencies** for better IDE support and validation
+
+## License
+
+MIT
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
