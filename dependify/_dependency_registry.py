@@ -1,15 +1,17 @@
 from collections.abc import Mapping
 from inspect import signature
 from types import MappingProxyType
-from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import Optional
 from typing import Self
 from typing import Type
+from typing import TypeVar
 from typing import Union
 
 from dependify._dependency import Dependency
+
+ResolvedType = TypeVar("ResolvedType")
 
 
 class DependencyRegistry:
@@ -73,7 +75,7 @@ class DependencyRegistry:
             target = name
         self.register_dependency(name, Dependency(target, cached, autowired))
 
-    def resolve(self, name: Type) -> Any:
+    def resolve(self, name: ResolvedType, **kwargs) -> ResolvedType:
         """
         Resolves a dependency with the specified name.
 
@@ -91,14 +93,14 @@ class DependencyRegistry:
         if not dependency.autowire:
             return dependency.resolve()
 
-        kwargs = {}
+        annotation_kwargs = {}
         parameters = signature(dependency.target).parameters
 
         for name, parameter in parameters.items():
             if parameter.annotation in self._dependencies:
-                kwargs[name] = self.resolve(parameter.annotation)
-
-        return dependency.resolve(**kwargs)
+                annotation_kwargs[name] = self.resolve(parameter.annotation)
+        annotation_kwargs.update(kwargs)
+        return dependency.resolve(**annotation_kwargs)
 
     @property
     def dependencies(self) -> Mapping[Type, Dependency]:
