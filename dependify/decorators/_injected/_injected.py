@@ -81,7 +81,9 @@ def injected(
                 setattr(self, field_name, getattr(class_, field_name))
                 missing_args.remove(field_name)
         if missing_args:
-            raise TypeError(f"Missing arguments: {', '.join(missing_args)}")
+            raise TypeError(
+                f"Missing arguments: {', '.join(missing_args)} for {type(self).__name__}"
+            )
         if hasattr(self, "__post_init__"):
             self.__post_init__()
 

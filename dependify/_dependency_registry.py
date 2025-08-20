@@ -75,7 +75,7 @@ class DependencyRegistry:
             target = name
         self.register_dependency(name, Dependency(target, cached, autowired))
 
-    def resolve(self, name: ResolvedType, **kwargs) -> ResolvedType:
+    def resolve(self, name: ResolvedType, **kwargs) -> Optional[ResolvedType]:
         """
         Resolves a dependency with the specified name.
 
