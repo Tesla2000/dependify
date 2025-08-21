@@ -2,7 +2,10 @@ from functools import partial
 from inspect import Parameter
 from inspect import Signature
 from typing import Callable
+from typing import Dict
 from typing import Optional
+from typing import runtime_checkable
+from typing import Type
 from typing import TypeVar
 from typing import Union
 
@@ -14,6 +17,7 @@ from dependify.decorators import inject
 from ._get_annotations import get_annotations
 
 class_type = TypeVar("class_type", bound=type)
+_protocol_translator: Dict[Type, Type] = {}
 
 
 def injected(
@@ -64,6 +68,13 @@ def injected(
                     f"Keyword argument: {field_name} already provided as a positional argument"
                 )
             field_type = class_annotations[field_name]
+            if getattr(field_type, "_is_protocol", False) and not getattr(
+                field_type, "_is_runtime_protocol", True
+            ):
+                _protocol_translator[field_type] = _protocol_translator.get(
+                    field_type, runtime_checkable(field_type)
+                )
+                field_type = _protocol_translator[field_type]
             if isinstance(value, ConditionalResult):
                 value = value.resolve(self)
             if (
