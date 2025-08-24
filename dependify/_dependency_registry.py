@@ -117,6 +117,9 @@ class DependencyRegistry:
     def clear(self):
         self._dependencies = {}
 
+    def copy(self) -> Self:
+        return type(self)(dependencies=dict(self.dependencies))
+
     def __add__(self, other: "DependencyRegistry") -> "DependencyRegistry":
         if not isinstance(other, DependencyRegistry):
             raise ValueError(
