@@ -3,6 +3,7 @@ from inspect import Parameter
 from inspect import Signature
 from typing import Callable
 from typing import Dict
+from typing import get_type_hints
 from typing import Optional
 from typing import runtime_checkable
 from typing import Type
@@ -41,7 +42,10 @@ def injected(
 
         class_.__init__ = __init__
         return class_
-    class_annotations = get_annotations(class_)
+    try:
+        class_annotations = get_type_hints(class_)
+    except NameError:
+        class_annotations = get_annotations(class_)
     annotations = tuple(class_annotations.items())
 
     def __init__(self, *args, **kwargs):
@@ -93,7 +97,7 @@ def injected(
                 missing_args.remove(field_name)
         if missing_args:
             raise TypeError(
-                f"Missing arguments: {', '.join(missing_args)} for {type(self).__name__}"
+                f"Missing arguments: {', '.join(f"{arg_name} of type {class_annotations.get(arg_name, 'unknown')}" for arg_name in missing_args)} for {type(self).__name__}"
             )
         if hasattr(self, "__post_init__"):
             self.__post_init__()

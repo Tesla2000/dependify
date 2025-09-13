@@ -474,16 +474,16 @@ class TestInjected(TestCase):
         with self.assertRaises(TypeError) as cm:
             MultiClass(a=1, c=True)  # missing b and d
         self.assertIn("Missing arguments", str(cm.exception))
-        self.assertIn("b", str(cm.exception))
-        self.assertIn("d", str(cm.exception))
+        self.assertIn("b ", str(cm.exception))
+        self.assertIn("d ", str(cm.exception))
         # The error message should only contain b and d, not a or c
         error_msg = str(cm.exception)
         # Extract just the part after "Missing arguments: "
         missing_part = error_msg.removeprefix(
             "Missing arguments: "
         ).removesuffix(f" for {MultiClass.__name__}")
-        self.assertNotIn("a", missing_part)
-        self.assertNotIn("c", missing_part)
+        self.assertNotIn("a ", missing_part)
+        self.assertNotIn("c ", missing_part)
 
     def test_injected_class_remains_unchanged(self):
         """Test that @injected doesn't modify the class in unexpected ways"""
