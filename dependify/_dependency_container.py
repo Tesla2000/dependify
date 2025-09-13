@@ -14,9 +14,9 @@ from dependify._dependency import Dependency
 ResolvedType = TypeVar("ResolvedType")
 
 
-class DependencyRegistry:
+class DependencyInjectionContainer:
     """
-    A class representing a dependency injection registry.
+    A class representing a dependency injection container.
 
     The `Container` class is responsible for registering and resolving dependencies.
     It allows you to register dependencies by name and resolve them when needed.
@@ -107,7 +107,7 @@ class DependencyRegistry:
     @property
     def dependencies(self) -> Mapping[Type, Dependency]:
         """
-        Returns a read-only view of the registry's dependencies.
+        Returns a read-only view of the container's dependencies.
         """
         return MappingProxyType(self._dependencies)
 
@@ -120,10 +120,12 @@ class DependencyRegistry:
     def copy(self) -> Self:
         return type(self)(dependencies=dict(self.dependencies))
 
-    def __add__(self, other: "DependencyRegistry") -> "DependencyRegistry":
-        if not isinstance(other, DependencyRegistry):
+    def __add__(
+        self, other: "DependencyInjectionContainer"
+    ) -> "DependencyInjectionContainer":
+        if not isinstance(other, DependencyInjectionContainer):
             raise ValueError(
-                f"Only {DependencyRegistry.__name__} can be added to {type(self).__name__}"
+                f"Only {DependencyInjectionContainer.__name__} can be added to {type(self).__name__}"
             )
         return type(self)(
             dependencies={**other.dependencies, **self.dependencies}

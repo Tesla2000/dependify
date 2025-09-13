@@ -222,11 +222,12 @@ print(service.get_users())
 Isolate dependencies using custom registries:
 
 ```python
-from dependify import DependencyRegistry, wired
+from dependify import DependencyInjectionContainer, wired
 
 # Create separate registries for different modules
-auth_registry = DependencyRegistry()
-payment_registry = DependencyRegistry()
+auth_registry = DependencyInjectionContainer()
+payment_registry = DependencyInjectionContainer()
+
 
 # Authentication module
 @wired(registry=auth_registry)
@@ -234,13 +235,15 @@ class TokenService:
     def generate_token(self):
         return "auth_token_xyz"
 
+
 @wired(registry=auth_registry)
 class AuthenticationService:
     token_service: TokenService
-    
+
     def authenticate(self, username: str):
         token = self.token_service.generate_token()
         return f"User {username} authenticated with {token}"
+
 
 # Payment module
 @wired(registry=payment_registry)
@@ -248,13 +251,15 @@ class PaymentGateway:
     def process(self, amount: float):
         return f"Processing ${amount}"
 
+
 @wired(registry=payment_registry)
 class PaymentService:
     gateway: PaymentGateway
-    
+
     def charge(self, user: str, amount: float):
         result = self.gateway.process(amount)
         return f"Charging {user}: {result}"
+
 
 # Each registry maintains its own isolated dependencies
 auth_service = AuthenticationService()
@@ -272,14 +277,16 @@ print(payment_service.charge("alice", 99.99))
 Use context managers to temporarily modify dependency registrations:
 
 ```python
-from dependify import DependencyRegistry, injectable
+from dependify import DependencyInjectionContainer, injectable
 
-registry = DependencyRegistry()
+registry = DependencyInjectionContainer()
+
 
 @injectable(registry=registry)
 class PermanentService:
     def get_name(self):
         return "permanent"
+
 
 # Permanent registration
 print(PermanentService in registry)  # True
@@ -290,18 +297,20 @@ with registry:
     class TemporaryService:
         def get_name(self):
             return "temporary"
-    
+
+
     print(TemporaryService in registry)  # True
-    
+
     # Nested context for even more temporary registrations
     with registry:
         @injectable(registry=registry)
         class VeryTemporaryService:
             def get_name(self):
                 return "very temporary"
-        
+
+
         print(VeryTemporaryService in registry)  # True
-    
+
     # VeryTemporaryService is gone after inner context
     print(VeryTemporaryService in registry)  # False
     print(TemporaryService in registry)  # Still True
@@ -314,10 +323,11 @@ print(PermanentService in registry)  # Still True
 ### Practical Context Manager Example
 
 ```python
-from dependify import DependencyRegistry, wired
+from dependify import DependencyInjectionContainer, wired
 
 # Production configuration
-prod_registry = DependencyRegistry()
+prod_registry = DependencyInjectionContainer()
+
 
 @wired(registry=prod_registry)
 class EmailService:
@@ -325,12 +335,14 @@ class EmailService:
         # In production, actually send email
         return f"Email sent to {to}: {message}"
 
+
 @wired(registry=prod_registry)
 class NotificationSystem:
     email: EmailService
-    
+
     def notify_user(self, user: str, message: str):
         return self.email.send(user, message)
+
 
 # Testing with temporary mock
 with prod_registry:
@@ -338,7 +350,8 @@ with prod_registry:
     class MockEmailService:
         def send(self, to: str, message: str):
             return f"[MOCK] Email to {to}: {message}"
-    
+
+
     # Within context, mock is used
     notifier = NotificationSystem()
     result = notifier.notify_user("test@example.com", "Test message")
@@ -420,42 +433,44 @@ print(service.get_user(1))  # From cache: User#1
 ### Testing with Mocks
 
 ```python
-from dependify import DependencyRegistry, wired
+from dependify import DependencyInjectionContainer, wired
+
 
 def create_test_environment():
-    test_registry = DependencyRegistry()
-    
+    test_registry = DependencyInjectionContainer()
+
     @wired(registry=test_registry)
     class MockDatabase:
         def __init__(self):
             self.queries = []
-        
+
         def execute(self, query: str):
             self.queries.append(query)
             return f"Mock result for: {query}"
-    
+
     @wired(registry=test_registry)
     class MockCache:
         def __init__(self):
             self.data = {"test_key": "test_value"}
-        
+
         def get(self, key: str):
             return self.data.get(key, "not_found")
-    
+
     @wired(registry=test_registry)
     class ServiceUnderTest:
         db: MockDatabase
         cache: MockCache
-        
+
         def process(self, key: str):
             cached = self.cache.get(key)
             if cached != "not_found":
                 return f"Cached: {cached}"
-            
+
             result = self.db.execute(f"SELECT * FROM table WHERE key='{key}'")
             return f"Database: {result}"
-    
+
     return ServiceUnderTest, test_registry
+
 
 # Run tests
 ServiceClass, registry = create_test_environment()
@@ -465,7 +480,7 @@ service = ServiceClass()
 print(service.process("test_key"))  # Cached: test_value
 
 # Test with database query
-print(service.process("new_key"))   # Database: Mock result for: SELECT * FROM table WHERE key='new_key'
+print(service.process("new_key"))  # Database: Mock result for: SELECT * FROM table WHERE key='new_key'
 
 # Verify mock was called
 print(service.db.queries)  # ["SELECT * FROM table WHERE key='new_key'"]
@@ -474,32 +489,37 @@ print(service.db.queries)  # ["SELECT * FROM table WHERE key='new_key'"]
 ### Conditional Dependencies
 
 ```python
-from dependify import wired, ConditionalResult, DependencyRegistry, injectable
+from dependify import wired, ConditionalResult, DependencyInjectionContainer, injectable
 
-registry = DependencyRegistry()
+registry = DependencyInjectionContainer()
+
 
 @injectable(registry=registry)
 class BaseLogger:
     def __init__(self, level: str):
         self.level = level
-    
+
     def log(self, message: str):
         return f"[{self.level}] {message}"
+
 
 @wired(registry=registry)
 class ProductionService:
     logger: BaseLogger
     service_type: str = "production"
 
+
 @wired(registry=registry)
 class DevelopmentService:
     logger: BaseLogger
     service_type: str = "development"
 
+
 @wired(registry=registry)
 class TestService:
     logger: BaseLogger
     service_type: str = "test"
+
 
 # Register conditional logger that provides different instances based on context
 registry.register(
@@ -520,8 +540,8 @@ dev = DevelopmentService()
 test = TestService()
 
 print(prod.logger.log("Production message"))  # [ERROR] Production message
-print(dev.logger.log("Dev message"))         # [DEBUG] Dev message
-print(test.logger.log("Test message"))       # [TRACE] Test message
+print(dev.logger.log("Dev message"))  # [DEBUG] Dev message
+print(test.logger.log("Test message"))  # [TRACE] Test message
 ```
 
 ### Working with Existing `__init__` Methods

@@ -4,17 +4,17 @@ from typing import runtime_checkable
 from unittest import TestCase
 
 from dependify import ConditionalResult
-from dependify import default_registry
+from dependify import default_container
+from dependify import DependencyInjectionContainer
 from dependify import injectable
 from dependify import injected
-from dependify._dependency_registry import DependencyRegistry
 
 
 class TestInjected(TestCase):
     def setUp(self):
-        """Reset the global registry before each test"""
+        """Reset the global container before each test"""
         # Access the private attribute correctly with name mangling
-        default_registry.clear()
+        default_container.clear()
 
     def test_injected_basic_functionality(self):
         """Test basic @injected functionality with simple class"""
@@ -181,24 +181,24 @@ class TestInjected(TestCase):
         with self.assertRaisesRegex(TypeError, "Missing arguments: x"):
             InjectedChild(y="test")
 
-    def test_injected_with_custom_registry(self):
-        """Test @injected with custom registry"""
-        custom_registry = DependencyRegistry()
+    def test_injected_with_custom_container(self):
+        """Test @injected with custom container"""
+        custom_container = DependencyInjectionContainer()
 
         class CustomService:
             def __init__(self):
                 self.name = "custom"
 
-        custom_registry.register(CustomService)
+        custom_container.register(CustomService)
 
-        # Apply @injected with custom registry
+        # Apply @injected with custom container
         class App:
             service: CustomService
             version: str
 
-        App = injected(App, registry=custom_registry)
+        App = injected(App, container=custom_container)
 
-        # Test automatic injection with custom registry
+        # Test automatic injection with custom container
         app = App(version="1.0")
         self.assertEqual(app.version, "1.0")
         self.assertIsInstance(app.service, CustomService)
@@ -479,7 +479,9 @@ class TestInjected(TestCase):
         # The error message should only contain b and d, not a or c
         error_msg = str(cm.exception)
         # Extract just the part after "Missing arguments: "
-        missing_part = error_msg.split("Missing arguments: ")[1]
+        missing_part = error_msg.removeprefix(
+            "Missing arguments: "
+        ).removesuffix(f" for {MultiClass.__name__}")
         self.assertNotIn("a", missing_part)
         self.assertNotIn("c", missing_part)
 
@@ -500,79 +502,79 @@ class TestInjected(TestCase):
         self.assertEqual(TestClass.__name__, "TestClass")
         self.assertEqual(TestClass.__module__, __name__)
 
-    def test_injected_with_multiple_custom_registrys(self):
-        """Test @injected with multiple custom registrys"""
-        registry1 = DependencyRegistry()
-        registry2 = DependencyRegistry()
+    def test_injected_with_multiple_custom_containers(self):
+        """Test @injected with multiple custom containers"""
+        container1 = DependencyInjectionContainer()
+        container2 = DependencyInjectionContainer()
 
-        @injectable(registry=registry1)
+        @injectable(container=container1)
         class Service1:
             def __init__(self):
                 self.name = "Service from Container1"
 
-        @injectable(registry=registry2)
+        @injectable(container=container2)
         class Service2:
             def __init__(self):
                 self.name = "Service from Container2"
 
-        # Test class using registry1
-        @injected(registry=registry1)
+        # Test class using container1
+        @injected(container=container1)
         class App1:
             service: Service1
             version: str
 
-        # Test class using registry2
-        @injected(registry=registry2)
+        # Test class using container2
+        @injected(container=container2)
         class App2:
             service: Service2
             version: str
 
-        # App1 should resolve Service1 from registry1
+        # App1 should resolve Service1 from container1
         app1 = App1(version="1.0")
         self.assertIsInstance(app1.service, Service1)
         self.assertEqual(app1.service.name, "Service from Container1")
         self.assertEqual(app1.version, "1.0")
 
-        # App2 should resolve Service2 from registry2
+        # App2 should resolve Service2 from container2
         app2 = App2(version="2.0")
         self.assertIsInstance(app2.service, Service2)
         self.assertEqual(app2.service.name, "Service from Container2")
         self.assertEqual(app2.version, "2.0")
 
-        # Service1 should not be available in registry2
-        self.assertFalse(Service1 in registry2)
-        # Service2 should not be available in registry1
-        self.assertFalse(Service2 in registry1)
+        # Service1 should not be available in container2
+        self.assertFalse(Service1 in container2)
+        # Service2 should not be available in container1
+        self.assertFalse(Service2 in container1)
 
-    def test_injected_with_dependencies_from_different_registrys(self):
-        """Test @injected with dependencies registered in different registrys"""
-        registry1 = DependencyRegistry()
-        registry2 = DependencyRegistry()
+    def test_injected_with_dependencies_from_different_containers(self):
+        """Test @injected with dependencies registered in different containers"""
+        container1 = DependencyInjectionContainer()
+        container2 = DependencyInjectionContainer()
 
-        @injectable(registry=registry1)
+        @injectable(container=container1)
         class Database:
             def __init__(self):
                 self.name = "MainDB"
 
-        @injectable(registry=registry2)
+        @injectable(container=container2)
         class Logger:
             def __init__(self):
                 self.level = "DEBUG"
 
-        # This should fail because App is using registry1 but Logger is in registry2
-        @injected(registry=registry1)
+        # This should fail because App is using container1 but Logger is in container2
+        @injected(container=container1)
         class AppWithMissingDep:
             db: Database
-            logger: Logger  # This is not in registry1
+            logger: Logger  # This is not in container1
             name: str
 
-        # Should raise TypeError because Logger is not in registry1
+        # Should raise TypeError because Logger is not in container1
         with self.assertRaises(TypeError) as cm:
             AppWithMissingDep(name="TestApp")
         self.assertIn("Missing arguments: logger", str(cm.exception))
 
-        # Now register Logger in registry1 as well
-        registry1.register(Logger)
+        # Now register Logger in container1 as well
+        container1.register(Logger)
 
         # Now it should work
         app = AppWithMissingDep(name="TestApp")
@@ -580,36 +582,36 @@ class TestInjected(TestCase):
         self.assertIsInstance(app.logger, Logger)
         self.assertEqual(app.name, "TestApp")
 
-    def test_injected_registry_isolation(self):
-        """Test that @injected with custom registry's maintains isolation"""
-        custom_registry = DependencyRegistry()
+    def test_injected_container_isolation(self):
+        """Test that @injected with custom container's maintains isolation"""
+        custom_container = DependencyInjectionContainer()
 
-        # Register in default registry
+        # Register in default container
         @injectable
         class DefaultService:
             def __init__(self):
                 self.source = "default"
 
-        # Register in custom registry
-        @injectable(registry=custom_registry)
+        # Register in custom container
+        @injectable(container=custom_container)
         class CustomService:
             def __init__(self):
                 self.source = "custom"
 
-        # Also register DefaultService in custom registry with different implementation
-        @injectable(registry=custom_registry, patch=DefaultService)
+        # Also register DefaultService in custom container with different implementation
+        @injectable(container=custom_container, patch=DefaultService)
         class CustomDefaultService(DefaultService):
             def __init__(self):
                 self.source = "custom-override"
 
-        # Class using default registry
+        # Class using default container
         @injected
         class DefaultApp:
             service: DefaultService
             name: str
 
-        # Class using custom registry
-        @injected(registry=custom_registry)
+        # Class using custom container
+        @injected(container=custom_container)
         class CustomApp:
             service: (
                 DefaultService  # Should get CustomDefaultService due to patch
@@ -617,12 +619,12 @@ class TestInjected(TestCase):
             custom_service: CustomService
             name: str
 
-        # Test default registry app
+        # Test default container app
         default_app = DefaultApp(name="Default")
         self.assertEqual(default_app.service.source, "default")
         self.assertEqual(default_app.name, "Default")
 
-        # Test custom registry app
+        # Test custom container app
         custom_app = CustomApp(name="Custom")
         self.assertEqual(
             custom_app.service.source, "custom-override"
@@ -630,56 +632,56 @@ class TestInjected(TestCase):
         self.assertEqual(custom_app.custom_service.source, "custom")
         self.assertEqual(custom_app.name, "Custom")
 
-        # Verify isolation - CustomService should not be in default registry
-        self.assertFalse(CustomService in default_registry)
-        self.assertTrue(CustomService in custom_registry)
+        # Verify isolation - CustomService should not be in default container
+        self.assertFalse(CustomService in default_container)
+        self.assertTrue(CustomService in custom_container)
 
-    def test_injected_registry_isolation_wrong_type(self):
-        custom_registry = DependencyRegistry()
+    def test_injected_container_isolation_wrong_type(self):
+        custom_container = DependencyInjectionContainer()
 
-        # Register in default registry
+        # Register in default container
         @injectable
         class DefaultService:
             source: str
 
-        # Also register DefaultService in custom registry with different implementation
-        @injectable(registry=custom_registry, patch=DefaultService)
+        # Also register DefaultService in custom container with different implementation
+        @injectable(container=custom_container, patch=DefaultService)
         class CustomDefaultService:
             def __init__(self):
                 self.source = "custom-override"
 
-        # Class using custom registry
-        @injected(registry=custom_registry)
+        # Class using custom container
+        @injected(container=custom_container)
         class CustomApp:
             service: (
                 DefaultService  # Should get CustomDefaultService due to patch
             )
             name: str
 
-        # Test custom registry app
+        # Test custom container app
         with self.assertRaises(
             TypeError,
-            msg="Expected <class 'test_injected.TestInjected.test_injected_registry_isolation_wrong_type.<locals>.DefaultService'> for service, got <class 'test_injected.TestInjected.test_injected_registry_isolation_wrong_type.<locals>.CustomDefaultService'>",
+            msg="Expected <class 'test_injected.TestInjected.test_injected_container_isolation_wrong_type.<locals>.DefaultService'> for service, got <class 'test_injected.TestInjected.test_injected_container_isolation_wrong_type.<locals>.CustomDefaultService'>",
         ):
             CustomApp(name="Custom")
 
-    def test_injected_registry_isolation_interface(self):
-        custom_registry = DependencyRegistry()
+    def test_injected_container_isolation_interface(self):
+        custom_container = DependencyInjectionContainer()
 
-        # Register in default registry
+        # Register in default container
         @injectable
         @runtime_checkable
         class DefaultService(Protocol):
             source: str
 
-        # Also register DefaultService in custom registry with different implementation
-        @injectable(registry=custom_registry, patch=DefaultService)
+        # Also register DefaultService in custom container with different implementation
+        @injectable(container=custom_container, patch=DefaultService)
         class CustomDefaultService:
             def __init__(self):
                 self.source = "custom-override"
 
-        # Class using custom registry
-        @injected(registry=custom_registry)
+        # Class using custom container
+        @injected(container=custom_container)
         class CustomApp:
             service: (
                 DefaultService  # Should get CustomDefaultService due to patch
@@ -690,26 +692,26 @@ class TestInjected(TestCase):
 
     def test_injected_with_conditional_result(self):
         """Test @injected with ConditionalResult for dynamic dependency injection"""
-        registry = DependencyRegistry()
+        container = DependencyInjectionContainer()
 
-        @injectable(registry=registry)
+        @injectable(container=container)
         class Application:
             def __init__(self, role: str):
                 self.role = role
 
-        @injected(registry=registry)
+        @injected(container=container)
         class AdminService:
             app: Application
 
-        @injected(registry=registry)
+        @injected(container=container)
         class UserService:
             app: Application
 
-        @injected(registry=registry)
+        @injected(container=container)
         class GuestService:
             app: Application
 
-        registry.register(
+        container.register(
             Application,
             lambda: ConditionalResult(
                 Application("default"),
@@ -734,9 +736,9 @@ class TestInjected(TestCase):
 
     def test_injected_with_post_init(self):
         """Test @injected with __post_init__ method"""
-        registry = DependencyRegistry()
+        container = DependencyInjectionContainer()
 
-        @injected(registry=registry)
+        @injected(container=container)
         class ServiceWithPostInit:
             def __init__(self, value: int = 10):
                 self.value = value

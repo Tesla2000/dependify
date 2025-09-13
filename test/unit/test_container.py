@@ -1,11 +1,11 @@
 from unittest import TestCase
 
-from dependify import DependencyRegistry
+from dependify import DependencyInjectionContainer
 
 
 class TestContainer(TestCase):
 
-    def test_registry_register_class(self):
+    def test_container_register_class(self):
         """
         Test if a class dependency can be registered successfully.
         """
@@ -13,15 +13,15 @@ class TestContainer(TestCase):
         class A:
             pass
 
-        registry = DependencyRegistry()
-        registry.register(A)
-        self.assertTrue(A in registry)
+        container = DependencyInjectionContainer()
+        container.register(A)
+        self.assertTrue(A in container)
 
-    def test_registry_register_function(self):
+    def test_container_register_function(self):
         """
         Test if a function based dependency can be registered successfully.
         """
-        registry = DependencyRegistry()
+        container = DependencyInjectionContainer()
 
         class A:
             pass
@@ -29,10 +29,10 @@ class TestContainer(TestCase):
         def func():
             return A()
 
-        registry.register(A, func)
-        self.assertTrue(A in registry)
+        container.register(A, func)
+        self.assertTrue(A in container)
 
-    def test_registry_resolve(self):
+    def test_container_resolve(self):
         """
         Test if a dependency can be resolved successfully.
         """
@@ -40,12 +40,12 @@ class TestContainer(TestCase):
         class A:
             pass
 
-        registry = DependencyRegistry()
-        registry.register(A)
-        result = registry.resolve(A)
+        container = DependencyInjectionContainer()
+        container.register(A)
+        result = container.resolve(A)
         self.assertIsInstance(result, A)
 
-    def test_registry_resolve_cached(self):
+    def test_container_resolve_cached(self):
         """
         Test if the dependency is cached when the `cached` property is set to `True`.
         """
@@ -53,13 +53,13 @@ class TestContainer(TestCase):
         class A:
             pass
 
-        registry = DependencyRegistry()
-        registry.register(A, cached=True)
-        result1 = registry.resolve(A)
-        result2 = registry.resolve(A)
+        container = DependencyInjectionContainer()
+        container.register(A, cached=True)
+        result1 = container.resolve(A)
+        result2 = container.resolve(A)
         self.assertIs(result1, result2)
 
-    def test_registry_resolve_not_cached(self):
+    def test_container_resolve_not_cached(self):
         """
         Test if the dependency is not cached when the `cached` property is set to `False`.
         """
@@ -67,13 +67,13 @@ class TestContainer(TestCase):
         class A:
             pass
 
-        registry = DependencyRegistry()
-        registry.register(A, cached=False)
-        result1 = registry.resolve(A)
-        result2 = registry.resolve(A)
+        container = DependencyInjectionContainer()
+        container.register(A, cached=False)
+        result1 = container.resolve(A)
+        result2 = container.resolve(A)
         self.assertIsNot(result1, result2)
 
-    def test_registry_resolve_not_cached_by_default(self):
+    def test_container_resolve_not_cached_by_default(self):
         """
         Test if the dependency is not cached by default.
         """
@@ -81,13 +81,13 @@ class TestContainer(TestCase):
         class A:
             pass
 
-        registry = DependencyRegistry()
-        registry.register(A)
-        result1 = registry.resolve(A)
-        result2 = registry.resolve(A)
+        container = DependencyInjectionContainer()
+        container.register(A)
+        result1 = container.resolve(A)
+        result2 = container.resolve(A)
         self.assertIsNot(result1, result2)
 
-    def test_registry_resolve_with_dependencies(self):
+    def test_container_resolve_with_dependencies(self):
         """
         Test if a dependency can be resolved successfully with dependencies.
         """
@@ -99,14 +99,14 @@ class TestContainer(TestCase):
             def __init__(self, b: B):
                 self.b = b
 
-        registry = DependencyRegistry()
-        registry.register(A)
-        registry.register(B)
-        result = registry.resolve(A)
+        container = DependencyInjectionContainer()
+        container.register(A)
+        container.register(B)
+        result = container.resolve(A)
         self.assertIsInstance(result, A)
         self.assertIsInstance(result.b, B)
 
-    def test_registry_resolve_autowire_dependency_disabled(self):
+    def test_container_resolve_autowire_dependency_disabled(self):
         """
         Test if a dependency can be resolved successfully with autowire disabled.
         """
@@ -118,11 +118,11 @@ class TestContainer(TestCase):
             def __init__(self, b: B):
                 self.b = b
 
-        registry = DependencyRegistry()
-        registry.register(A, autowired=False)
-        registry.register(B)
+        container = DependencyInjectionContainer()
+        container.register(A, autowired=False)
+        container.register(B)
 
         with self.assertRaisesRegex(
             TypeError, "missing 1 required positional argument"
         ):
-            registry.resolve(A)
+            container.resolve(A)

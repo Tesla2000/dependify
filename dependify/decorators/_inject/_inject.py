@@ -1,25 +1,29 @@
 from functools import wraps
 
-from dependify._default_registry import default_registry
-from dependify._dependency_registry import DependencyRegistry
+from dependify._default_container import default_container
+from dependify._dependency_container import DependencyInjectionContainer
 
 from ._get_existing_annot import get_existing_annot
 
 
-def inject(_func=None, *, registry: DependencyRegistry = default_registry):
+def inject(
+    _func=None, *, container: DependencyInjectionContainer = default_container
+):
     """
     Decorator to inject dependencies into a function.
 
     Parameters:
-        registry (DependencyRegistry): the registry used to inject the dependencies. Defaults to module registry.
+        container (DependencyInjectionContainer): the container used to inject the dependencies. Defaults to module container.
     """
 
     def decorated(func):
         @wraps(func)
         def subdecorator(*args, **kwargs):
-            for name, annotation in get_existing_annot(func, registry).items():
+            for name, annotation in get_existing_annot(
+                func, container
+            ).items():
                 if name not in kwargs:  # Only inject if not already provided
-                    kwargs[name] = registry.resolve(annotation)
+                    kwargs[name] = container.resolve(annotation)
             return func(*args, **kwargs)
 
         return subdecorator
