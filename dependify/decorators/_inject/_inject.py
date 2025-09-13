@@ -19,9 +19,8 @@ def inject(
     def decorated(func):
         @wraps(func)
         def subdecorator(*args, **kwargs):
-            for name, annotation in get_existing_annot(
-                func, container
-            ).items():
+            existing_annotations = get_existing_annot(func, container)
+            for name, annotation in existing_annotations.items():
                 if name not in kwargs:  # Only inject if not already provided
                     kwargs[name] = container.resolve(annotation)
             return func(*args, **kwargs)
