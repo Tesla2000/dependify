@@ -4,8 +4,8 @@ from typing import Optional
 from typing import TypeVar
 from typing import Union
 
-from dependify._default_registry import default_registry
-from dependify._dependency_registry import DependencyRegistry
+from dependify._default_container import default_container
+from dependify._dependency_container import DependencyInjectionContainer
 
 from ._injectable import injectable
 from ._injected import injected
@@ -20,7 +20,7 @@ def wired(
     cached=False,
     autowire=True,
     validate: bool = True,
-    registry: DependencyRegistry = default_registry,
+    container: DependencyInjectionContainer = default_container,
 ) -> Union[class_type, Callable[[class_type], class_type]]:
     """
     Decorator that combines @injectable and @injected decorators.
@@ -33,12 +33,12 @@ def wired(
             cached=cached,
             autowire=autowire,
             validate=validate,
-            registry=registry,
+            container=container,
         )
     return injectable(
-        injected(class_, validate=validate, registry=registry),
+        injected(class_, validate=validate, container=container),
         patch=patch,
         cached=cached,
         autowire=autowire,
-        registry=registry,
+        container=container,
     )

@@ -5,19 +5,19 @@ from dependify import inject
 
 class TestInject(TestCase):
 
-    def test_inject_with_registry(self):
+    def test_inject_with_container(self):
         """
-        Test if the `inject` decorator can be used with a custom registry.
+        Test if the `inject` decorator can be used with a custom container.
         """
-        from dependify import DependencyRegistry
+        from dependify import DependencyInjectionContainer
 
         class A:
             pass
 
-        registry = DependencyRegistry()
-        registry.register(A)
+        container = DependencyInjectionContainer()
+        container.register(A)
 
-        @inject(registry=registry)
+        @inject(container=container)
         def test(a: A):
             self.assertIsInstance(a, A)
 

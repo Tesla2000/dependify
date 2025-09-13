@@ -1,9 +1,9 @@
 from typing import Optional
 from typing import Type
 
-from dependify._default_registry import default_registry
-from dependify._default_registry import register
-from dependify._dependency_registry import DependencyRegistry
+from dependify._default_container import default_container
+from dependify._default_container import register
+from dependify._dependency_container import DependencyInjectionContainer
 
 
 def injectable(
@@ -12,13 +12,13 @@ def injectable(
     patch: Optional[Type] = None,
     cached=False,
     autowire=True,
-    registry: DependencyRegistry = default_registry,
+    container: DependencyInjectionContainer = default_container,
 ):
     def decorator(func):
         if patch:
-            register(patch, func, cached, autowire, registry)
+            register(patch, func, cached, autowire, container)
         else:
-            register(func, None, cached, autowire, registry)
+            register(func, None, cached, autowire, container)
 
         return func
 

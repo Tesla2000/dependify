@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from dependify import DependencyRegistry
+from dependify import DependencyInjectionContainer
 
 
 class TestContext(TestCase):
@@ -9,8 +9,8 @@ class TestContext(TestCase):
         class A:
             pass
 
-        registry = DependencyRegistry()
-        registry.register(A)
+        container = DependencyInjectionContainer()
+        container.register(A)
 
         class B:
             pass
@@ -18,23 +18,23 @@ class TestContext(TestCase):
         class C:
             pass
 
-        self.assertIn(A, registry)
-        with registry:
-            registry.register(B)
-            self.assertIn(A, registry)
-            self.assertIn(B, registry)
-            self.assertNotIn(C, registry)
-            self.assertEqual(1, len(registry._dep_cp))
-            with registry:
-                registry.register(C)
-                self.assertIn(A, registry)
-                self.assertIn(B, registry)
-                self.assertIn(C, registry)
-                self.assertEqual(2, len(registry._dep_cp))
-            self.assertEqual(1, len(registry._dep_cp))
-            self.assertIn(A, registry)
-            self.assertIn(B, registry)
-            self.assertNotIn(C, registry)
+        self.assertIn(A, container)
+        with container:
+            container.register(B)
+            self.assertIn(A, container)
+            self.assertIn(B, container)
+            self.assertNotIn(C, container)
+            self.assertEqual(1, len(container._dep_cp))
+            with container:
+                container.register(C)
+                self.assertIn(A, container)
+                self.assertIn(B, container)
+                self.assertIn(C, container)
+                self.assertEqual(2, len(container._dep_cp))
+            self.assertEqual(1, len(container._dep_cp))
+            self.assertIn(A, container)
+            self.assertIn(B, container)
+            self.assertNotIn(C, container)
 
-        self.assertNotIn(B, registry)
-        self.assertFalse(registry._dep_cp)
+        self.assertNotIn(B, container)
+        self.assertFalse(container._dep_cp)
