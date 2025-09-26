@@ -45,6 +45,18 @@ class TestContainer(TestCase):
         result = container.resolve(A)
         self.assertIsInstance(result, A)
 
+    def test_container_resolve_not_present(self):
+        """
+        Test if a dependency raises Value error if it can't be resolved successfully.
+        """
+
+        class A:
+            pass
+
+        container = DependencyInjectionContainer()
+        with self.assertRaises(ValueError):
+            container.resolve(A)
+
     def test_container_resolve_cached(self):
         """
         Test if the dependency is cached when the `cached` property is set to `True`.
