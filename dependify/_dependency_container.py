@@ -75,9 +75,7 @@ class DependencyInjectionContainer:
             target = name
         self.register_dependency(name, Dependency(target, cached, autowired))
 
-    def resolve(
-        self, name: Type[ResolvedType], **kwargs
-    ) -> Optional[ResolvedType]:
+    def resolve(self, name: Type[ResolvedType], **kwargs) -> ResolvedType:
         """
         Resolves a dependency with the specified name.
 
@@ -88,7 +86,7 @@ class DependencyInjectionContainer:
             Any: The resolved dependency, or None if the dependency is not registered.
         """
         if name not in self._dependencies:
-            return None
+            raise ValueError(f"{name=} couldn't be resolved")
 
         dependency = self._dependencies[name]
 
