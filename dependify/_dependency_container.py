@@ -85,7 +85,7 @@ class DependencyInjectionContainer:
         Returns:
             Any: The resolved dependency, or None if the dependency is not registered.
         """
-        resolved = self.resolve(name, **kwargs)
+        resolved = self.resolve_optional(name, **kwargs)
         if resolved is None:
             raise ValueError(f"{name=} couldn't be resolved")
         return resolved
@@ -115,7 +115,9 @@ class DependencyInjectionContainer:
 
         for name, parameter in parameters.items():
             if parameter.annotation in self._dependencies:
-                annotation_kwargs[name] = self.resolve(parameter.annotation)
+                annotation_kwargs[name] = self.resolve_optional(
+                    parameter.annotation
+                )
         annotation_kwargs.update(kwargs)
         return dependency.resolve(**annotation_kwargs)
 
