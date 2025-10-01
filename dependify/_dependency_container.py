@@ -85,8 +85,25 @@ class DependencyInjectionContainer:
         Returns:
             Any: The resolved dependency, or None if the dependency is not registered.
         """
-        if name not in self._dependencies:
+        resolved = self.resolve(name, **kwargs)
+        if resolved is None:
             raise ValueError(f"{name=} couldn't be resolved")
+        return resolved
+
+    def resolve_optional(
+        self, name: Type[ResolvedType], **kwargs
+    ) -> Optional[ResolvedType]:
+        """
+        Resolves a dependency with the specified name.
+
+        Args:
+            name (Type): The name of the dependency.
+
+        Returns:
+            Any: The resolved dependency, or None if the dependency is not registered.
+        """
+        if name not in self._dependencies:
+            return None
 
         dependency = self._dependencies[name]
 
