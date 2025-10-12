@@ -3,6 +3,8 @@ from inspect import Parameter
 from inspect import Signature
 from typing import Callable
 from typing import Dict
+from typing import get_args
+from typing import get_origin
 from typing import get_type_hints
 from typing import Optional
 from typing import runtime_checkable
@@ -19,6 +21,58 @@ from ._get_annotations import get_annotations
 
 class_type = TypeVar("class_type", bound=type)
 _protocol_translator: Dict[Type, Type] = {}
+
+
+def resolve_type_vars(class_: type) -> Dict[str, type]:
+    """
+    Resolve type variables in a generic class to their concrete types.
+    For example, in ServiceImpl(Service[Impl2]), resolve BoundT to Impl2.
+    """
+    type_var_map = {}
+
+    # Look for generic base classes
+    for base in getattr(class_, "__orig_bases__", []):
+        origin = get_origin(base)
+        if origin is None:
+            continue
+
+        # Get the type arguments (e.g., [Impl2] in Service[Impl2])
+        args = get_args(base)
+        if not args:
+            continue
+
+        # Get the type parameters from the generic base
+        # This requires looking at the base class's __parameters__
+        # Map each type parameter to its concrete type
+        for param, arg in zip(getattr(origin, "__parameters__", ()), args):
+            if isinstance(param, TypeVar):
+                type_var_map[param] = arg
+
+    return type_var_map
+
+
+def get_resolved_annotations(class_: type) -> Dict[str, type]:
+    """
+    Get annotations with type variables resolved to concrete types.
+    """
+    try:
+        annotations = get_type_hints(class_)
+    except NameError:
+        annotations = get_annotations(class_)
+
+    # Get the type variable mapping
+    type_var_map = resolve_type_vars(class_)
+
+    # Resolve type variables in annotations
+    resolved_annotations = {}
+    for name, type_hint in annotations.items():
+        # Check if the type hint is a TypeVar that we can resolve
+        if isinstance(type_hint, TypeVar) and type_hint in type_var_map:
+            resolved_annotations[name] = type_var_map[type_hint]
+        else:
+            resolved_annotations[name] = type_hint
+
+    return resolved_annotations
 
 
 def injected(
@@ -42,10 +96,8 @@ def injected(
 
         class_.__init__ = __init__
         return class_
-    try:
-        class_annotations = get_type_hints(class_)
-    except NameError:
-        class_annotations = get_annotations(class_)
+    # Use the new function that resolves type variables
+    class_annotations = get_resolved_annotations(class_)
     annotations = tuple(class_annotations.items())
 
     def __init__(self, *args, **kwargs):

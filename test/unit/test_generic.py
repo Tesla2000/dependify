@@ -1,4 +1,6 @@
 import unittest
+from abc import ABC
+from abc import abstractmethod
 from typing import Generic
 from typing import TypeVar
 
@@ -112,6 +114,35 @@ class TestGeneric(unittest.TestCase):
         service = self.container.resolve_optional(MyService)
         assert isinstance(service, MyService)
         assert isinstance(service.repo, UserRepo)
+
+    def test_generic_dependency(self):
+        class AbstractClass(ABC):
+            @abstractmethod
+            def foo(self):
+                pass
+
+        @wired(container=self.container)
+        class Impl1(AbstractClass):
+            def foo(self):
+                return "impl1"
+
+        @wired(container=self.container)
+        class Impl2(AbstractClass):
+            def foo(self):
+                return "impl2"
+
+        BoundT = TypeVar("BoundT", bound=AbstractClass)
+
+        class Service(Generic[BoundT]):
+            impl: BoundT
+
+        @wired(container=self.container)
+        class ServiceImpl(Service[Impl2]):
+            pass
+
+        service = self.container.resolve_optional(ServiceImpl)
+        assert isinstance(service, Service)
+        assert isinstance(service.impl, Impl2)
 
 
 if __name__ == "__main__":
