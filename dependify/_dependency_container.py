@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from contextlib import suppress
 from inspect import signature
 from types import MappingProxyType
 from typing import Callable
@@ -108,6 +109,23 @@ class DependencyInjectionContainer:
             origin = get_origin(name)
             if origin is None:
                 return None
+
+            # Check if there's a registered subclass of the generic type
+            # For example, if looking for Repo[User], check if UserRepo is registered
+            # where UserRepo is a subclass of Repo[User]
+            for registered_type in self._dependencies:
+                if not isinstance(registered_type, type):
+                    continue
+                if any(
+                    map(
+                        name.__eq__,
+                        getattr(registered_type, "__orig_bases__", ()),
+                    )
+                ):
+                    # Found a registered subclass with matching generic base
+                    with suppress(TypeError, AttributeError):
+                        return self.resolve_optional(registered_type, **kwargs)
+
             # Try to resolve the origin class
             if origin in self._dependencies:
                 # The generic base class is registered in this container

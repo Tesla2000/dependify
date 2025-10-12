@@ -92,26 +92,26 @@ class TestGeneric(unittest.TestCase):
         assert isinstance(service.user1, User)
         assert isinstance(service.user2, User)
 
-    # def test_overwritten(self):
-    #     @wired
-    #     class Repo(Generic[T]):
-    #         pass
-    #
-    #     @wired(container=self.container)
-    #     class User:
-    #         pass
-    #
-    #     @wired(container=self.container)
-    #     class UserRepo(Repo[User]):
-    #         pass
-    #
-    #     @wired(container=self.container)
-    #     class MyService:
-    #         repo: Repo[User]
-    #
-    #     service = self.container.resolve_optional(MyService)
-    #     assert isinstance(service, MyService)
-    #     assert isinstance(service.repo, UserRepo)
+    def test_overwritten(self):
+        @wired
+        class Repo(Generic[T]):
+            pass
+
+        @wired(container=self.container)
+        class User:
+            pass
+
+        @wired(container=self.container)
+        class UserRepo(Repo[User]):
+            pass
+
+        @wired(container=self.container)
+        class MyService:
+            repo: Repo[User]
+
+        service = self.container.resolve_optional(MyService)
+        assert isinstance(service, MyService)
+        assert isinstance(service.repo, UserRepo)
 
 
 if __name__ == "__main__":
