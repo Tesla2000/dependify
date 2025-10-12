@@ -3,6 +3,8 @@ from inspect import signature
 from types import MappingProxyType
 from typing import Callable
 from typing import Dict
+from typing import get_args
+from typing import get_origin
 from typing import Optional
 from typing import Self
 from typing import Type
@@ -103,6 +105,23 @@ class DependencyInjectionContainer:
             Any: The resolved dependency, or None if the dependency is not registered.
         """
         if name not in self._dependencies:
+            origin = get_origin(name)
+            if origin is None:
+                return None
+            # Try to resolve the origin class
+            if origin in self._dependencies:
+                # The generic base class is registered in this container
+                dependency = self._dependencies[origin]
+                origin_instance_factory = dependency.target
+            else:
+                # Not registered, but we can still try to use the class directly
+                origin_instance_factory = origin
+
+            resolved_args = [
+                self.resolve_optional(arg) or arg() for arg in get_args(name)
+            ]
+            if all(resolved_args):
+                return origin_instance_factory(*resolved_args)
             return None
 
         dependency = self._dependencies[name]

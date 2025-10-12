@@ -20,9 +20,15 @@ def inject(
         @wraps(func)
         def subdecorator(*args, **kwargs):
             existing_annotations = get_existing_annot(func, container)
+            # Filter out 'self' to avoid conflicts
+            existing_annotations = {
+                k: v for k, v in existing_annotations.items() if k != "self"
+            }
             for name, annotation in existing_annotations.items():
                 if name not in kwargs:  # Only inject if not already provided
-                    kwargs[name] = container.resolve(annotation)
+                    resolved = container.resolve_optional(annotation)
+                    if resolved is not None:
+                        kwargs[name] = resolved
             return func(*args, **kwargs)
 
         return subdecorator
