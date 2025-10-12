@@ -7,7 +7,6 @@ from typing import Dict
 from typing import get_args
 from typing import get_origin
 from typing import Optional
-from typing import Self
 from typing import Type
 from typing import TypeVar
 from typing import Union
@@ -171,7 +170,7 @@ class DependencyInjectionContainer:
     def clear(self):
         self._dependencies = {}
 
-    def copy(self) -> Self:
+    def copy(self) -> "DependencyInjectionContainer":
         return type(self)(dependencies=dict(self.dependencies))
 
     def __add__(
@@ -185,7 +184,7 @@ class DependencyInjectionContainer:
             dependencies={**other.dependencies, **self.dependencies}
         )
 
-    def __enter__(self) -> Self:
+    def __enter__(self) -> "DependencyInjectionContainer":
         self._dep_cp.append(self._dependencies.copy())
         return self
 
