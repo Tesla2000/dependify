@@ -128,8 +128,8 @@ def injected(
                 field_type, "_is_runtime_protocol", True
             ):
                 _protocol_translator[field_type] = _protocol_translator.get(
-                    field_type, runtime_checkable(field_type)
-                )
+                    field_type
+                ) or runtime_checkable(field_type)
                 field_type = _protocol_translator[field_type]
             if isinstance(value, ConditionalResult):
                 value = value.resolve(self)
