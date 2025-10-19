@@ -26,7 +26,7 @@ def get_existing_annot(
         else:
             # Check if it's a generic type - we can try to resolve it
             origin = get_origin(annotation)
-            if origin is not None:
+            if origin is not None and origin in container:
                 existing_annot[name] = annotation
 
     return existing_annot

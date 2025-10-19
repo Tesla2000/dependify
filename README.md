@@ -587,6 +587,39 @@ except TypeError as e:
     # Error: __init__() missing required positional arguments
 ```
 
+### Working with Generics
+
+Dependify supports Python generics for flexible, reusable components:
+
+```python
+from dependify import wired, DependencyInjectionContainer
+from typing import Generic, TypeVar
+
+T = TypeVar("T")
+
+@wired
+class Repository(Generic[T]):
+    def save(self, item: T):
+        return f"Saved {item}"
+
+@wired
+class User:
+    name: str = "Alice"
+
+@wired
+class UserService:
+    repo: Repository[User]  # Generic type automatically resolved
+
+# Override with specific implementation
+@wired
+class UserRepository(Repository[User]):
+    def save(self, item: User):
+        return f"User {item.name} saved to database"
+
+service = UserService()
+print(isinstance(service.repo, UserRepository))  # True - specific impl injected
+```
+
 ## API Reference
 
 ### `@wired` Decorator
