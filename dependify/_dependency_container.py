@@ -1,8 +1,11 @@
 from contextvars import ContextVar
 from inspect import signature
 from types import MappingProxyType
+from typing import Annotated
 from typing import Callable
 from typing import Dict
+from typing import get_args
+from typing import get_origin
 from typing import List
 from typing import Mapping
 from typing import Optional
@@ -139,10 +142,15 @@ class DependencyInjectionContainer:
         Returns:
             Any: The resolved dependency, or None if the dependency is not registered.
         """
-        if name not in self._dependencies:
+        if not (
+            (dependency := self._dependencies.get(name))
+            or (
+                get_origin(name) is Annotated
+                and (args := get_args(name))
+                and (dependency := self._dependencies.get(args[0]))
+            )
+        ):
             return None
-
-        dependency = self._dependencies[name]
 
         if not dependency.autowire:
             return dependency.resolve()
