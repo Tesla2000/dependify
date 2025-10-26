@@ -155,8 +155,8 @@ def injected(
             raise TypeError(
                 f"Missing arguments: {missing_arguments} for {type(self).__name__}"
             )
-        if hasattr(self, "__post_init__"):
-            self.__post_init__()
+        if hasattr(class_, "__post_init__"):
+            class_.__post_init__(self)
 
     __init__.__annotations__ = class_annotations.copy()
     __init__.__signature__ = Signature(
