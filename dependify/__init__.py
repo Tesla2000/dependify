@@ -41,6 +41,7 @@ from dependify._dependency import Dependency
 from dependify._dependency_injection_container import (
     DependencyInjectionContainer,
 )
+from dependify.decorators import Eager
 from dependify.decorators import inject
 from dependify.decorators import injectable
 from dependify.decorators import injected
@@ -64,4 +65,5 @@ __all__ = [
     "ConditionalResult",
     "Lazy",
     "OptionalLazy",
+    "Eager",
 ]

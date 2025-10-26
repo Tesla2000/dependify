@@ -13,6 +13,11 @@ A powerful and flexible dependency injection framework for Python that makes man
   - [Patching Dependencies](#patching-dependencies)
   - [Custom Registries](#custom-registries)
 - [Context Managers](#context-managers)
+- [Lazy Evaluation](#lazy-evaluation)
+  - [Class-level Lazy Evaluation](#class-level-lazy-evaluation)
+  - [Field-level Lazy Evaluation](#field-level-lazy-evaluation)
+  - [Optional Lazy Dependencies](#optional-lazy-dependencies)
+  - [Performance Benefits](#performance-benefits)
 - [Advanced Examples](#advanced-examples)
   - [Complex Service Architecture](#complex-service-architecture)
   - [Testing with Mocks](#testing-with-mocks)
@@ -363,6 +368,236 @@ result = notifier.notify_user("user@example.com", "Real message")
 print(result)  # Email sent to user@example.com: Real message
 ```
 
+## Lazy Evaluation
+
+Dependify supports lazy evaluation of dependencies, allowing you to defer the creation of dependencies until they are actually needed. This can significantly improve performance, reduce startup time, and save resources for dependencies that may not be used in all code paths.
+
+### Class-level Lazy Evaluation
+
+Control when all dependencies of a class are instantiated using the `evaluation_strategy` parameter:
+
+```python
+from dependify import wired, EvaluationStrategy
+
+@wired
+class DatabaseConnection:
+    def __init__(self):
+        print("Database connected!")  # Expensive operation
+        self.connected = True
+
+@wired
+class CacheService:
+    def __init__(self):
+        print("Cache initialized!")  # Another expensive operation
+        self.ready = True
+
+# EAGER evaluation (default) - dependencies created immediately
+@wired(evaluation_strategy=EvaluationStrategy.EAGER)
+class EagerService:
+    db: DatabaseConnection
+    cache: CacheService
+    name: str
+
+service = EagerService(name="MyService")
+# Output immediately:
+# Database connected!
+# Cache initialized!
+
+# LAZY evaluation - dependencies created on first access
+@wired(evaluation_strategy=EvaluationStrategy.LAZY)
+class LazyService:
+    db: DatabaseConnection
+    cache: CacheService
+    name: str
+
+service = LazyService(name="MyService")
+# No output yet - dependencies not created
+
+_ = service.db
+# Output: Database connected!
+
+_ = service.cache
+# Output: Cache initialized!
+```
+
+### Field-level Lazy Evaluation
+
+Mark specific fields for lazy evaluation using type markers with `Annotated`:
+
+```python
+from typing import Annotated
+from dependify import wired, Lazy, OptionalLazy
+
+@wired
+class ExpensiveDatabase:
+    def __init__(self):
+        print("Connecting to expensive database...")
+        # Simulate expensive connection
+        self.connected = True
+
+@wired
+class QuickLogger:
+    def __init__(self):
+        print("Logger initialized quickly")
+        self.ready = True
+
+@wired
+class OptionalCache:
+    def __init__(self):
+        print("Cache initialized")
+
+# Mix eager and lazy fields in the same class
+@wired  # Class defaults to EAGER
+class MixedService:
+    logger: QuickLogger                              # Eager (immediate)
+    db: Annotated[ExpensiveDatabase, Lazy]          # Lazy (deferred)
+    cache: Annotated[OptionalCache, OptionalLazy]   # Optional lazy
+    name: str
+
+service = MixedService(name="MyService")
+# Output: Logger initialized quickly
+# (Database and cache not created yet)
+
+# Access lazy dependency when needed
+connection = service.db
+# Output: Connecting to expensive database...
+
+# If OptionalCache is not registered, returns None instead of error
+cache = service.cache  # Returns None or instance if registered
+```
+
+### Optional Lazy Dependencies
+
+Use `OptionalLazy` for dependencies that might not be available:
+
+```python
+from typing import Annotated
+from dependify import wired, OptionalLazy
+
+@wired
+class CoreService:
+    """Always available"""
+    def process(self):
+        return "processed"
+
+# AnalyticsService is NOT registered
+class AnalyticsService:
+    def track(self, event: str):
+        return f"Tracked: {event}"
+
+@wired
+class Application:
+    core: CoreService                                    # Required dependency
+    analytics: Annotated[AnalyticsService, OptionalLazy]  # Optional dependency
+    name: str
+
+app = Application(name="MyApp")
+
+# Core service works fine
+print(app.core.process())  # Output: processed
+
+# Analytics returns None since it's not registered (no error!)
+if app.analytics:
+    app.analytics.track("app_started")
+else:
+    print("Analytics not available")  # This branch executes
+```
+
+### Use OPTIONAL_LAZY for Class-level Optional Dependencies
+
+```python
+from dependify import injected, EvaluationStrategy
+
+class FeatureFlag:
+    """Optional feature - may not be registered"""
+    def is_enabled(self, feature: str):
+        return True
+
+@injected(evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY)
+class FeatureAwareService:
+    feature_flags: FeatureFlag
+    name: str
+
+service = FeatureAwareService(name="MyService")
+
+# Check if optional dependency is available
+if service.feature_flags:
+    enabled = service.feature_flags.is_enabled("new_feature")
+else:
+    enabled = False  # Default behavior when not available
+```
+
+### Performance Benefits
+
+Lazy evaluation provides several advantages:
+
+1. **Faster Startup**: Expensive dependencies only created when needed
+```python
+@wired(evaluation_strategy=EvaluationStrategy.LAZY)
+class FastStartupService:
+    expensive_ml_model: MachineLearningModel  # Only loaded if used
+    heavy_database: DatabaseConnection        # Only connected if used
+    large_cache: CacheService                 # Only initialized if used
+
+    def quick_operation(self):
+        # This can run without loading ML model
+        return "fast"
+```
+
+2. **Conditional Usage**: Don't pay for dependencies you don't use
+```python
+@wired
+class ConditionalService:
+    db: Annotated[Database, Lazy]
+    api: Annotated[ExternalAPI, Lazy]
+
+    def get_data(self, use_cache: bool):
+        if use_cache:
+            return "cached_data"  # DB never created!
+        return self.db.query()    # DB created only here
+```
+
+3. **Resource Efficiency**: Save memory and connections
+```python
+@wired
+class ResourceEfficientService:
+    # 10 different dependencies, but typically only 2-3 are used
+    dep1: Annotated[Service1, Lazy]
+    dep2: Annotated[Service2, Lazy]
+    # ... more dependencies
+    dep10: Annotated[Service10, Lazy]
+
+    # Only creates what you actually use
+```
+
+4. **Graceful Degradation**: Optional dependencies enable fallback behavior
+```python
+@wired
+class ResilientService:
+    primary: PrimaryService
+    analytics: Annotated[AnalyticsService, OptionalLazy]
+    monitoring: Annotated[MonitoringService, OptionalLazy]
+
+    def process(self, data):
+        result = self.primary.process(data)
+
+        # These are nice-to-have, not critical
+        if self.analytics:
+            self.analytics.track("processed", result)
+        if self.monitoring:
+            self.monitoring.record_metric("process_time", 42)
+
+        return result
+```
+
+### Best Practices for Lazy Evaluation
+
+1. **Use LAZY for expensive dependencies**: Database connections, ML models, large caches
+2. **Use OptionalLazy for non-critical features**: Analytics, monitoring, experimental features
+3. **Keep critical dependencies EAGER**: Configuration, logging, essential services
+4. **Profile before optimizing**: Measure which dependencies benefit most from lazy loading
+5. **Document lazy dependencies**: Make it clear which dependencies are lazy and why
+
 ## Advanced Examples
 
 ### Complex Service Architecture
@@ -599,7 +834,8 @@ def wired(
     cached: bool = False,
     autowire: bool = True,
     validate: bool = True,
-    registry: DependencyRegistry = default_registry
+    evaluation_strategy: EvaluationStrategy = EvaluationStrategy.EAGER,
+    container: DependencyInjectionContainer = default_container
 ) -> Union[Type, Callable[[Type], Type]]
 ```
 
@@ -609,7 +845,59 @@ def wired(
 - `cached`: If True, creates singleton instances
 - `autowire`: If True, automatically inject dependencies
 - `validate`: If True, validate type annotations
-- `registry`: The dependency registry to use
+- `evaluation_strategy`: When to create dependencies (`EAGER`, `LAZY`, or `OPTIONAL_LAZY`)
+- `container`: The dependency container to use
+
+### `@injected` Decorator
+
+```python
+def injected(
+    class_: Optional[Type] = None,
+    *,
+    validate: bool = True,
+    evaluation_strategy: EvaluationStrategy = EvaluationStrategy.EAGER,
+    container: DependencyInjectionContainer = default_container
+) -> Union[Type, Callable[[Type], Type]]
+```
+
+**Parameters:**
+- `class_`: The class to decorate (automatically provided)
+- `validate`: If True, validate type annotations
+- `evaluation_strategy`: When to create dependencies (`EAGER`, `LAZY`, or `OPTIONAL_LAZY`)
+- `container`: The dependency container to use
+
+### `EvaluationStrategy` Enum
+
+```python
+class EvaluationStrategy(Enum):
+    EAGER = "eager"           # Dependencies created immediately
+    LAZY = "lazy"             # Dependencies created on first access
+    OPTIONAL_LAZY = "optional_lazy"  # Returns None if not registered
+```
+
+### Lazy Markers
+
+Use with `typing.Annotated` for field-level control:
+
+```python
+from typing import Annotated
+from dependify import Lazy, OptionalLazy, Eager
+
+class MyService:
+    # Force lazy evaluation for this field
+    db: Annotated[Database, Lazy]
+
+    # Optional lazy - returns None if not registered
+    cache: Annotated[Cache, OptionalLazy]
+
+    # Force eager evaluation (useful when class is lazy)
+    logger: Annotated[Logger, Eager]
+```
+
+**Available Markers:**
+- `Lazy`: Defers dependency creation until first access
+- `OptionalLazy`: Defers creation and returns `None` if dependency not registered
+- `Eager`: Forces immediate creation (overrides class-level `LAZY`)
 
 ### `DependencyRegistry`
 
@@ -639,11 +927,13 @@ with registry:
 ## Best Practices
 
 1. **Use `@wired` for most cases** - It combines registration and injection
-2. **Use custom registries** for module isolation and testing
+2. **Use custom containers** for module isolation and testing
 3. **Use `cached=True`** for shared services and configuration
 4. **Use context managers** for temporary overrides in tests
-5. **Avoid circular dependencies** by restructuring your architecture
-6. **Type annotate all dependencies** for better IDE support and validation
+5. **Use lazy evaluation** for expensive or conditional dependencies
+6. **Use `OptionalLazy`** for non-critical, optional features
+7. **Avoid circular dependencies** by restructuring your architecture
+8. **Type annotate all dependencies** for better IDE support and validation
 
 ## License
 
