@@ -2,6 +2,7 @@ from inspect import signature
 from types import MappingProxyType
 from typing import Callable
 from typing import Dict
+from typing import List
 from typing import Mapping
 from typing import Optional
 from typing import Type
@@ -32,7 +33,7 @@ class DependencyInjectionContainer:
     """
 
     _dependencies: Dict[Type, Dependency]
-    _dep_cp: list[Dict[Type, Dependency]]
+    _dep_cp: List[Dict[Type, Dependency]]
 
     def __init__(self, dependencies: Optional[Dict[Type, Dependency]] = None):
         """
