@@ -38,7 +38,9 @@ from dependify._default_container import register
 from dependify._default_container import register_dependency
 from dependify._default_container import resolve
 from dependify._dependency import Dependency
-from dependify._dependency_container import DependencyInjectionContainer
+from dependify._dependency_injection_container import (
+    DependencyInjectionContainer,
+)
 from dependify.decorators import inject
 from dependify.decorators import injectable
 from dependify.decorators import injected

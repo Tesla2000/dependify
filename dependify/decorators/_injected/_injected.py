@@ -5,13 +5,14 @@ from typing import TypeVar
 from typing import Union
 
 from dependify._default_container import default_container
-from dependify._dependency_container import DependencyInjectionContainer
+from dependify._dependency_injection_container import (
+    DependencyInjectionContainer,
+)
 
-from ._create_eager import create_eager
-from ._create_lazy import create_lazy
 from ._evaluation_strategy import EvaluationStrategy
-from .property_makers.optional_property_maker import OptionalPropertyMaker
-from .property_makers.property_maker import PropertyMaker
+from .creators import EagerCreator
+from .creators import LazyCreator
+from .creators import OptionalLazyCreator
 
 class_type = TypeVar("class_type", bound=type)
 
@@ -38,15 +39,11 @@ def injected(
             f"{evaluation_strategy=} must be an instance of {EvaluationStrategy}"
         )
     if evaluation_strategy == EvaluationStrategy.EAGER:
-        return create_eager(class_, validate, container)
+        return EagerCreator[class_].create(class_, validate, container)
     if evaluation_strategy == EvaluationStrategy.LAZY:
-        return create_lazy(
-            class_, validate, PropertyMaker(validate, container)
-        )
+        return LazyCreator[class_].create(class_, validate, container)
     if evaluation_strategy == EvaluationStrategy.OPTIONAL_LAZY:
-        return create_lazy(
-            class_, validate, OptionalPropertyMaker(validate, container)
-        )
+        return OptionalLazyCreator[class_].create(class_, validate, container)
     raise NotImplementedError(
         f"Evaluation strategy {evaluation_strategy} not implemented"
     )

@@ -3,7 +3,9 @@ from typing import Type
 
 from dependify._default_container import default_container
 from dependify._default_container import register
-from dependify._dependency_container import DependencyInjectionContainer
+from dependify._dependency_injection_container import (
+    DependencyInjectionContainer,
+)
 
 
 def injectable(

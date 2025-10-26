@@ -1,6 +1,8 @@
 from typing import Type
 
-from dependify._dependency_container import DependencyInjectionContainer
+from dependify._dependency_injection_container import (
+    DependencyInjectionContainer,
+)
 from dependify.decorators._injected._validate_arg import validate_arg
 
 
