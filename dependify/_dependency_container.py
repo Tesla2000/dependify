@@ -1,3 +1,4 @@
+from contextvars import ContextVar
 from inspect import signature
 from types import MappingProxyType
 from typing import Callable
@@ -32,8 +33,9 @@ class DependencyInjectionContainer:
 
     """
 
-    _dependencies: Dict[Type, Dependency]
-    _dep_cp: List[Dict[Type, Dependency]]
+    _base_dependencies: Dict[Type, Dependency]
+    _context_dependencies: ContextVar[Optional[Dict[Type, Dependency]]]
+    _context_stack: ContextVar[List[Dict[Type, Dependency]]]
 
     def __init__(self, dependencies: Optional[Dict[Type, Dependency]] = None):
         """
@@ -42,8 +44,43 @@ class DependencyInjectionContainer:
         Args:
             dependencies (Dict[Type, Dependency], optional): A dictionary of dependencies to be registered. Defaults to an empty dictionary.
         """
-        self._dependencies = dependencies or {}
-        self._dep_cp = []
+        self._base_dependencies = dependencies or {}
+        self._context_dependencies = ContextVar("dependencies", default=None)
+        self._context_stack = ContextVar("dep_stack", default=None)
+
+    @property
+    def _dependencies(self) -> Dict[Type, Dependency]:
+        """
+        Returns the current dependencies for this context.
+        If in a context manager, returns the context-specific dependencies.
+        Otherwise, returns the base dependencies.
+        """
+        stack = self._context_stack.get()
+        if stack and len(stack) > 0:
+            return stack[-1]
+        return self._base_dependencies
+
+    @_dependencies.setter
+    def _dependencies(self, value: Dict[Type, Dependency]) -> None:
+        """
+        Sets the dependencies for the current context.
+        """
+        stack = self._context_stack.get()
+        if stack:
+            stack[-1] = value
+        else:
+            self._base_dependencies = value
+
+    @property
+    def _dep_cp(self) -> List[Dict[Type, Dependency]]:
+        """
+        Returns the dependency stack for this context.
+        """
+        stack = self._context_stack.get()
+        if stack is None:
+            stack = []
+            self._context_stack.set(stack)
+        return stack
 
     def register_dependency(self, name: Type, dependency: Dependency) -> None:
         """
@@ -158,5 +195,7 @@ class DependencyInjectionContainer:
         exc_val: Optional[BaseException],
         exc_tb: Optional[object],
     ) -> bool:
-        self._dependencies = self._dep_cp.pop()
+        stack = self._context_stack.get()
+        if stack:
+            stack.pop()
         return False
