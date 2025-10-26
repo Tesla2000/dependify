@@ -1,11 +1,8 @@
 from collections.abc import Mapping
-from contextlib import suppress
 from inspect import signature
 from types import MappingProxyType
 from typing import Callable
 from typing import Dict
-from typing import get_args
-from typing import get_origin
 from typing import Optional
 from typing import Type
 from typing import TypeVar
@@ -105,40 +102,6 @@ class DependencyInjectionContainer:
             Any: The resolved dependency, or None if the dependency is not registered.
         """
         if name not in self._dependencies:
-            origin = get_origin(name)
-            if origin is None:
-                return None
-
-            # Check if there's a registered subclass of the generic type
-            # For example, if looking for Repo[User], check if UserRepo is registered
-            # where UserRepo is a subclass of Repo[User]
-            for registered_type in self._dependencies:
-                if not isinstance(registered_type, type):
-                    continue
-                if any(
-                    map(
-                        name.__eq__,
-                        getattr(registered_type, "__orig_bases__", ()),
-                    )
-                ):
-                    # Found a registered subclass with matching generic base
-                    with suppress(TypeError, AttributeError):
-                        return self.resolve_optional(registered_type, **kwargs)
-
-            # Try to resolve the origin class
-            if origin in self._dependencies:
-                # The generic base class is registered in this container
-                dependency = self._dependencies[origin]
-                origin_instance_factory = dependency.target
-            else:
-                # Not registered, but we can still try to use the class directly
-                origin_instance_factory = origin
-
-            resolved_args = [
-                self.resolve_optional(arg) or arg() for arg in get_args(name)
-            ]
-            if all(resolved_args):
-                return origin_instance_factory(*resolved_args)
             return None
 
         dependency = self._dependencies[name]

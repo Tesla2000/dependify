@@ -1,6 +1,5 @@
 from inspect import signature
 from typing import Dict
-from typing import get_origin
 from typing import Type
 
 from dependify._default_container import default_container
@@ -20,13 +19,7 @@ def get_existing_annot(
         if parameter.default != parameter.empty:
             continue
 
-        annotation = parameter.annotation
-        if annotation in container:
-            existing_annot[name] = annotation
-        else:
-            # Check if it's a generic type - we can try to resolve it
-            origin = get_origin(annotation)
-            if origin is not None:
-                existing_annot[name] = annotation
+        if parameter.annotation in container:
+            existing_annot[name] = parameter.annotation
 
     return existing_annot
