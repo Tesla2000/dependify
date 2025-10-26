@@ -25,7 +25,6 @@ repos:
       - id: reorder-python-imports
         args: [
           --py37-plus,
-          --py39-plus,
           --retain-pre-import,
           'True',
           --application-directories,
