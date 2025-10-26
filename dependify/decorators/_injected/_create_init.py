@@ -1,36 +1,30 @@
 from inspect import Parameter
 from inspect import Signature
-from typing import TypeVar
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import Type
 
 from dependify._conditional_result import ConditionalResult
-from dependify._dependency_container import DependencyInjectionContainer
+from dependify._dependency_injection_container import (
+    DependencyInjectionContainer,
+)
 from dependify.decorators import inject
 
-from ._get_class_annotations import get_class_annotations
 from ._markers import Lazy
 from ._markers import OptionalLazy
-from ._protocol_translator import translate_protocol
+from ._protocol_translator import (
+    translate_protocol,
+)
 from ._validate_arg import validate_arg
-from .property_makers.optional_property_maker import OptionalPropertyMaker
-from .property_makers.property_maker import PropertyMaker
-
-ClassType = TypeVar("ClassType", bound=type)
 
 
-def create_eager(
-    class_: ClassType, validate: bool, container: DependencyInjectionContainer
-) -> ClassType:
-    if "__init__" in class_.__dict__:
-        prev_init = class_.__init__
-
-        def __init__(self, *args, **kwargs) -> None:
-            prev_init(self, *args, **kwargs)
-            if hasattr(self, "__post_init__"):
-                self.__post_init__()
-
-        class_.__init__ = __init__
-        return class_
-    class_annotations = get_class_annotations(class_)
+def create_init(
+    class_: Type,
+    validate: bool,
+    container: DependencyInjectionContainer,
+    class_annotations: Dict[str, Any],
+) -> Callable:
     annotations = tuple(class_annotations.items())
 
     def __init__(self, *args, **kwargs):
@@ -91,25 +85,4 @@ def create_eager(
             )
         )
     )
-    class_.__init__ = inject(__init__, container=container)
-    property_maker, optional_property_maker = PropertyMaker(
-        validate, container
-    ), OptionalPropertyMaker(validate, container)
-    for field_name, field_type in class_annotations.items():
-        if hasattr(class_, field_name):
-            continue
-        metadata = getattr(field_type, "__metadata__", ())
-        if Lazy in metadata:
-            setattr(
-                class_,
-                field_name,
-                property_maker.make_property(field_name, field_type),
-            )
-            continue
-        if OptionalLazy in metadata:
-            setattr(
-                class_,
-                field_name,
-                optional_property_maker.make_property(field_name, field_type),
-            )
-    return class_
+    return inject(__init__, container=container)

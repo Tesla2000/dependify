@@ -3,7 +3,9 @@ from typing import Type
 from typing import Union
 
 from dependify._dependency import Dependency
-from dependify._dependency_container import DependencyInjectionContainer
+from dependify._dependency_injection_container import (
+    DependencyInjectionContainer,
+)
 
 default_container = DependencyInjectionContainer()
 
