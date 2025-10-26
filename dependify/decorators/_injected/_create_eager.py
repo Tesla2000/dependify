@@ -7,8 +7,12 @@ from dependify._dependency_container import DependencyInjectionContainer
 from dependify.decorators import inject
 
 from ._get_class_annotations import get_class_annotations
+from ._markers import Lazy
+from ._markers import OptionalLazy
 from ._protocol_translator import translate_protocol
 from ._validate_arg import validate_arg
+from .property_makers.optional_property_maker import OptionalPropertyMaker
+from .property_makers.property_maker import PropertyMaker
 
 ClassType = TypeVar("ClassType", bound=type)
 
@@ -57,7 +61,10 @@ def create_eager(
             missing_args.remove(field_name)
         for field_name in tuple(missing_args):
             if hasattr(class_, field_name):
-                setattr(self, field_name, getattr(class_, field_name))
+                if not isinstance(
+                    value := getattr(class_, field_name), property
+                ):
+                    setattr(self, field_name, value)
                 missing_args.remove(field_name)
         if missing_args:
             missing_arguments = ", ".join(
@@ -74,11 +81,35 @@ def create_eager(
     __init__.__signature__ = Signature(
         (Parameter("self", Parameter.POSITIONAL_OR_KEYWORD),)
         + tuple(
-            Parameter(
-                name, Parameter.POSITIONAL_OR_KEYWORD, annotation=annotation
+            Parameter(name, Parameter.POSITIONAL_OR_KEYWORD, annotation=a)
+            for name, a in class_annotations.items()
+            if not any(
+                map(
+                    (Lazy, OptionalLazy).__contains__,
+                    getattr(a, "__metadata__", ()),
+                )
             )
-            for name, annotation in __init__.__annotations__.items()
         )
     )
     class_.__init__ = inject(__init__, container=container)
+    property_maker, optional_property_maker = PropertyMaker(
+        validate, container
+    ), OptionalPropertyMaker(validate, container)
+    for field_name, field_type in class_annotations.items():
+        if hasattr(class_, field_name):
+            continue
+        metadata = getattr(field_type, "__metadata__", ())
+        if Lazy in metadata:
+            setattr(
+                class_,
+                field_name,
+                property_maker.make_property(field_name, field_type),
+            )
+            continue
+        if OptionalLazy in metadata:
+            setattr(
+                class_,
+                field_name,
+                optional_property_maker.make_property(field_name, field_type),
+            )
     return class_

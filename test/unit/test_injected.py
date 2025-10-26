@@ -12,14 +12,12 @@ from dependify import injected
 
 class TestInjected(TestCase):
     def setUp(self):
-        """Reset the global container before each test"""
-        # Access the private attribute correctly with name mangling
-        default_container.clear()
+        self.container = DependencyInjectionContainer()
 
     def test_injected_basic_functionality(self):
         """Test basic @injected functionality with simple class"""
 
-        @injected
+        @injected(container=self.container)
         class Person:
             name: str
             age: int
@@ -43,7 +41,7 @@ class TestInjected(TestCase):
         """Test that @injected doesn't override existing __init__"""
         init_called = False
 
-        @injected
+        @injected(container=self.container)
         class CustomClass:
             def __init__(self, x: int):
                 nonlocal init_called
@@ -57,17 +55,17 @@ class TestInjected(TestCase):
     def test_injected_with_dependency_injection(self):
         """Test @injected with automatic dependency injection"""
 
-        @injectable
+        @injectable(container=self.container)
         class Database:
             def __init__(self):
                 self.connected = True
 
-        @injectable
+        @injectable(container=self.container)
         class Logger:
             def __init__(self):
                 self.level = "INFO"
 
-        @injected
+        @injected(container=self.container)
         class Service:
             db: Database
             logger: Logger
@@ -91,7 +89,7 @@ class TestInjected(TestCase):
     def test_injected_with_no_annotations(self):
         """Test @injected with class that has no annotations"""
 
-        @injected
+        @injected(container=self.container)
         class Empty:
             pass
 
@@ -102,7 +100,7 @@ class TestInjected(TestCase):
     def test_injected_type_checking(self):
         """Test type checking in generated __init__"""
 
-        @injected
+        @injected(container=self.container)
         class TypedClass:
             name: str
             count: int
@@ -127,7 +125,7 @@ class TestInjected(TestCase):
     def test_injected_error_cases(self):
         """Test various error cases"""
 
-        @injected
+        @injected(container=self.container)
         class TestClass:
             x: int
             y: str
@@ -159,7 +157,7 @@ class TestInjected(TestCase):
     def test_injected_with_inheritance(self):
         """Test @injected with class inheritance"""
 
-        @injected
+        @injected(container=self.container)
         class Base:
             x: int
 
@@ -174,7 +172,7 @@ class TestInjected(TestCase):
         self.assertFalse(hasattr(child, "y"))
 
         # Now test with @injected on child
-        @injected
+        @injected(container=self.container)
         class InjectedChild(Base):
             y: str
 
@@ -207,7 +205,7 @@ class TestInjected(TestCase):
     def test_injected_preserves_annotations(self):
         """Test that generated __init__ has correct annotations and signature"""
 
-        @injected
+        @injected(container=self.container)
         class AnnotatedClass:
             name: str
             value: int
@@ -232,12 +230,12 @@ class TestInjected(TestCase):
     def test_injected_preserves_annotations_inheritance(self):
         """Test that generated __init__ has correct annotations and signature"""
 
-        @injected
+        @injected(container=self.container)
         class AnnotatedClassAncestor:
             name: int
             value: int
 
-        @injected
+        @injected(container=self.container)
         class AnnotatedClass(AnnotatedClassAncestor):
             name: str
             enabled: bool
@@ -262,7 +260,7 @@ class TestInjected(TestCase):
         """Test @injected with optional fields (fields with defaults)"""
         from typing import Optional
 
-        @injected
+        @injected(container=self.container)
         class ConfigClass:
             host: str
             port: int
@@ -289,7 +287,7 @@ class TestInjected(TestCase):
     def test_injected_with_various_defaults(self):
         """Test @injected with various types of default values"""
 
-        @injected
+        @injected(container=self.container)
         class DefaultsClass:
             name: str
             count: int = 0
@@ -330,7 +328,7 @@ class TestInjected(TestCase):
     def test_injected_mixed_required_and_optional(self):
         """Test @injected with mix of required and optional fields"""
 
-        @injected
+        @injected(container=self.container)
         class MixedClass:
             # Required fields
             id: int
@@ -369,17 +367,17 @@ class TestInjected(TestCase):
     def test_injected_dependency_injection_with_defaults(self):
         """Test @injected with dependency injection and default values"""
 
-        @injectable
+        @injectable(container=self.container)
         class Logger:
             def __init__(self):
                 self.level = "INFO"
 
-        @injectable
+        @injectable(container=self.container)
         class Database:
             def __init__(self):
                 self.connected = True
 
-        @injected
+        @injected(container=self.container)
         class Service:
             name: str
             logger: Logger  # Will be auto-injected
@@ -423,12 +421,12 @@ class TestInjected(TestCase):
     def test_injected_non_injectable_defaults(self):
         """Test that non-injectable fields with defaults work correctly"""
 
-        @injectable
+        @injectable(container=self.container)
         class Logger:
             def __init__(self):
                 self.name = "default-logger"
 
-        @injected
+        @injected(container=self.container)
         class Application:
             name: str
             logger: Logger  # Injectable, will be auto-injected
@@ -456,7 +454,7 @@ class TestInjected(TestCase):
     def test_injected_multiple_missing_arguments(self):
         """Test that all missing arguments are reported"""
 
-        @injected
+        @injected(container=self.container)
         class MultiClass:
             a: int
             b: str
@@ -488,7 +486,7 @@ class TestInjected(TestCase):
     def test_injected_class_remains_unchanged(self):
         """Test that @injected doesn't modify the class in unexpected ways"""
 
-        @injected
+        @injected(container=self.container)
         class TestClass:
             x: int
 
@@ -587,7 +585,7 @@ class TestInjected(TestCase):
         custom_container = DependencyInjectionContainer()
 
         # Register in default container
-        @injectable
+        @injectable(container=self.container)
         class DefaultService:
             def __init__(self):
                 self.source = "default"
@@ -605,7 +603,7 @@ class TestInjected(TestCase):
                 self.source = "custom-override"
 
         # Class using default container
-        @injected
+        @injected(container=self.container)
         class DefaultApp:
             service: DefaultService
             name: str
@@ -640,7 +638,7 @@ class TestInjected(TestCase):
         custom_container = DependencyInjectionContainer()
 
         # Register in default container
-        @injectable
+        @injectable(container=self.container)
         class DefaultService:
             source: str
 
@@ -669,7 +667,7 @@ class TestInjected(TestCase):
         custom_container = DependencyInjectionContainer()
 
         # Register in default container
-        @injectable
+        @injectable(container=self.container)
         @runtime_checkable
         class DefaultService(Protocol):
             source: str
