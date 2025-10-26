@@ -18,6 +18,15 @@ A powerful and flexible dependency injection framework for Python that makes man
   - [Field-level Lazy Evaluation](#field-level-lazy-evaluation)
   - [Optional Lazy Dependencies](#optional-lazy-dependencies)
   - [Performance Benefits](#performance-benefits)
+- [Generics](#generics)
+  - [Basic Generic Usage](#basic-generic-usage)
+  - [Multiple Type Parameters](#multiple-type-parameters)
+  - [Multiple Generic Instances with Different Types](#multiple-generic-instances-with-different-types)
+  - [Generic Inheritance](#generic-inheritance)
+  - [Abstract Generic Classes](#abstract-generic-classes)
+  - [Generics with Caching](#generics-with-caching)
+  - [Complex Generic Hierarchies](#complex-generic-hierarchies)
+  - [Best Practices for Generics](#best-practices-for-generics)
 - [Advanced Examples](#advanced-examples)
   - [Complex Service Architecture](#complex-service-architecture)
   - [Testing with Mocks](#testing-with-mocks)
@@ -597,6 +606,387 @@ class ResilientService:
 3. **Keep critical dependencies EAGER**: Configuration, logging, essential services
 4. **Profile before optimizing**: Measure which dependencies benefit most from lazy loading
 5. **Document lazy dependencies**: Make it clear which dependencies are lazy and why
+
+## Generics
+
+Dependify has full support for Python generics, allowing you to create type-safe, reusable components with dependency injection. You can use `Generic[T]` from the `typing` module with `@wired` classes to build flexible repositories, services, and other components.
+
+### Basic Generic Usage
+
+Create generic classes that work with different types:
+
+```python
+from typing import Generic, TypeVar
+from dependify import wired
+
+T = TypeVar("T")
+
+@wired
+class Repository(Generic[T]):
+    """A generic repository that can store any type"""
+    items: list[T]
+
+    def __init__(self):
+        self.items = []
+
+    def add(self, item: T):
+        self.items.append(item)
+        return item
+
+    def get_all(self) -> list[T]:
+        return self.items
+
+@wired
+class User:
+    name: str
+    email: str
+
+@wired
+class UserService:
+    repo: Repository[User]  # Type-specific repository
+
+    def create_user(self, name: str, email: str):
+        user = User(name=name, email=email)
+        return self.repo.add(user)
+
+# Register the specific generic type
+from dependify import default_container
+default_container.register(Repository[User], Repository)
+
+service = UserService()
+user = service.create_user("Alice", "alice@example.com")
+print(f"Created: {user.name}")
+# Output: Created: Alice
+```
+
+### Multiple Type Parameters
+
+Use multiple type variables for more complex generic patterns:
+
+```python
+from typing import Generic, TypeVar
+from dependify import wired
+
+K = TypeVar("K")
+V = TypeVar("V")
+
+@wired
+class KeyValueStore(Generic[K, V]):
+    """A generic key-value store"""
+    storage: dict[K, V]
+
+    def __init__(self):
+        self.storage = {}
+
+    def set(self, key: K, value: V):
+        self.storage[key] = value
+
+    def get(self, key: K) -> V | None:
+        return self.storage.get(key)
+
+@wired
+class User:
+    name: str
+
+@wired
+class CacheService:
+    user_cache: KeyValueStore[str, User]
+
+    def cache_user(self, user_id: str, user: User):
+        self.user_cache.set(user_id, user)
+
+    def get_user(self, user_id: str) -> User | None:
+        return self.user_cache.get(user_id)
+
+# Register the specific generic type
+from dependify import default_container
+default_container.register(KeyValueStore[str, User], KeyValueStore)
+
+cache = CacheService()
+user = User(name="Bob")
+cache.cache_user("user_123", user)
+print(cache.get_user("user_123").name)
+# Output: Bob
+```
+
+### Multiple Generic Instances with Different Types
+
+Register and use the same generic class with different type arguments:
+
+```python
+from typing import Generic, TypeVar
+from dependify import wired, DependencyInjectionContainer
+
+T = TypeVar("T")
+
+registry = DependencyInjectionContainer()
+
+@wired(container=registry)
+class Repository(Generic[T]):
+    def __init__(self, entity_type: str):
+        self.entity_type = entity_type
+        self.items = []
+
+    def get_type(self) -> str:
+        return self.entity_type
+
+class User:
+    pass
+
+class Product:
+    pass
+
+@wired(container=registry)
+class Application:
+    user_repo: Repository[User]
+    product_repo: Repository[Product]
+
+    def show_repositories(self):
+        print(f"User repo type: {self.user_repo.get_type()}")
+        print(f"Product repo type: {self.product_repo.get_type()}")
+
+# Register different instances for each type
+registry.register(Repository[User], lambda: Repository("User"))
+registry.register(Repository[Product], lambda: Repository("Product"))
+
+app = Application()
+app.show_repositories()
+# Output:
+# User repo type: User
+# Product repo type: Product
+```
+
+### Generic Inheritance
+
+Build inheritance hierarchies with generics:
+
+```python
+from typing import Generic, TypeVar
+from dependify import wired
+
+T = TypeVar("T")
+
+@wired
+class BaseRepository(Generic[T]):
+    """Base repository with common functionality"""
+    base_initialized: bool = True
+
+    def get_type_name(self) -> str:
+        return "BaseRepository"
+
+@wired
+class User:
+    name: str
+
+@wired
+class EnhancedUserRepository(BaseRepository[User]):
+    """User-specific repository with enhanced features"""
+    enhanced: bool = True
+
+    def get_type_name(self) -> str:
+        return "EnhancedUserRepository"
+
+    def find_by_name(self, name: str):
+        return f"Finding user: {name}"
+
+@wired
+class UserService:
+    repo: EnhancedUserRepository
+
+    def lookup_user(self, name: str):
+        return self.repo.find_by_name(name)
+
+service = UserService()
+print(service.repo.get_type_name())  # EnhancedUserRepository
+print(service.repo.base_initialized)  # True
+print(service.lookup_user("Alice"))  # Finding user: Alice
+```
+
+### Abstract Generic Classes
+
+Combine generics with abstract base classes for flexible architectures:
+
+```python
+from abc import ABC, abstractmethod
+from typing import Generic, TypeVar, Optional
+from dependify import wired, DependencyInjectionContainer
+
+T = TypeVar("T")
+registry = DependencyInjectionContainer()
+
+@wired(container=registry)
+class Repository(ABC, Generic[T]):
+    """Abstract repository interface"""
+
+    @abstractmethod
+    def save(self, item: T) -> bool:
+        pass
+
+    @abstractmethod
+    def find(self, id: int) -> Optional[T]:
+        pass
+
+class User:
+    def __init__(self, user_id: int, name: str):
+        self.user_id = user_id
+        self.name = name
+
+@wired(container=registry)
+class InMemoryUserRepository(Repository[User]):
+    """Concrete implementation for User entities"""
+
+    def __init__(self):
+        self.storage = {}
+
+    def save(self, item: User) -> bool:
+        self.storage[item.user_id] = item
+        return True
+
+    def find(self, id: int) -> Optional[User]:
+        return self.storage.get(id)
+
+@wired(container=registry)
+class UserService:
+    repo: Repository[User]  # Depend on abstract type
+
+    def create_and_find_user(self, user_id: int, name: str):
+        user = User(user_id, name)
+        self.repo.save(user)
+        return self.repo.find(user_id)
+
+# Register concrete implementation for abstract type
+registry.register(Repository[User], InMemoryUserRepository)
+
+service = UserService()
+found_user = service.create_and_find_user(1, "Charlie")
+print(f"Found: {found_user.name}")
+# Output: Found: Charlie
+```
+
+### Generics with Caching
+
+Use `cached=True` to share generic instances across your application:
+
+```python
+from typing import Generic, TypeVar
+from dependify import wired, DependencyInjectionContainer
+
+T = TypeVar("T")
+registry = DependencyInjectionContainer()
+
+@wired(container=registry, cached=True)
+class SharedRepository(Generic[T]):
+    """A shared singleton repository"""
+
+    def __init__(self):
+        self.instance_id = id(self)
+        self.data = []
+
+class User:
+    pass
+
+@wired(container=registry)
+class ServiceA:
+    repo: SharedRepository[User]
+
+@wired(container=registry)
+class ServiceB:
+    repo: SharedRepository[User]
+
+# Register as cached
+registry.register(SharedRepository[User], SharedRepository, cached=True)
+
+service_a = ServiceA()
+service_b = ServiceB()
+
+# Both services share the same repository instance
+print(service_a.repo.instance_id == service_b.repo.instance_id)
+# Output: True
+```
+
+### Complex Generic Hierarchies
+
+Build sophisticated type hierarchies with nested generics:
+
+```python
+from typing import Generic, TypeVar
+from dependify import wired, DependencyInjectionContainer
+
+T = TypeVar("T")
+U = TypeVar("U")
+
+registry = DependencyInjectionContainer()
+
+@wired(container=registry)
+class BaseRepository(Generic[T]):
+    """Base repository for any entity type"""
+    level: str = "base"
+
+@wired(container=registry)
+class Service(Generic[T]):
+    """Generic service that depends on a repository"""
+    repo: BaseRepository[T]
+
+class User:
+    name: str = "DefaultUser"
+
+@wired(container=registry)
+class Application:
+    """Application using specific service type"""
+    user_service: Service[User]
+
+    def get_repo_level(self):
+        return self.user_service.repo.level
+
+# Register the hierarchy
+registry.register(BaseRepository[User], BaseRepository)
+registry.register(
+    Service[User],
+    lambda: Service(registry.resolve(BaseRepository[User]))
+)
+
+app = Application()
+print(f"Repository level: {app.get_repo_level()}")
+# Output: Repository level: base
+```
+
+### Best Practices for Generics
+
+1. **Register Specific Types**: Always register concrete generic types like `Repository[User]`, not the raw generic `Repository`
+   ```python
+   # Good
+   registry.register(Repository[User], Repository)
+
+   # Bad - won't work as expected
+   registry.register(Repository, Repository)
+   ```
+
+2. **Use Abstract Base Classes**: Combine `ABC` with generics for flexible, testable designs
+   ```python
+   @wired
+   class AbstractRepo(ABC, Generic[T]):
+       @abstractmethod
+       def save(self, item: T): pass
+   ```
+
+3. **Type Hints Everywhere**: Always annotate your generic type parameters for better IDE support
+   ```python
+   @wired
+   class Service:
+       repo: Repository[User]  # Clear and explicit
+   ```
+
+4. **Separate Instances for Different Types**: Each type specialization gets its own registration
+   ```python
+   registry.register(Repository[User], lambda: Repository("users"))
+   registry.register(Repository[Product], lambda: Repository("products"))
+   ```
+
+5. **Use Caching Wisely**: Cache generic instances when they should be shared
+   ```python
+   # Shared configuration across all services
+   registry.register(Config[AppSettings], Config, cached=True)
+   ```
 
 ## Advanced Examples
 
