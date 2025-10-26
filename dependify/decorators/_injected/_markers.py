@@ -15,7 +15,11 @@ Usage:
 """
 
 
-class _LazyMarker:
+class Marker:
+    pass
+
+
+class _LazyMarker(Marker):
     """
     Marker class for lazy field evaluation.
 
@@ -39,7 +43,7 @@ class _LazyMarker:
         return hash("Lazy")
 
 
-class _OptionalLazyMarker:
+class _OptionalLazyMarker(Marker):
     """
     Marker class for optional lazy field evaluation.
 
@@ -62,6 +66,20 @@ class _OptionalLazyMarker:
         return hash("OptionalLazy")
 
 
+class _EagerMarker(Marker):
+
+    def __repr__(self) -> str:
+        return "Eager"
+
+    def __eq__(self, other) -> bool:
+        return isinstance(other, _EagerMarker)
+
+    def __hash__(self) -> int:
+        return hash("Eager")
+
+
 # Singleton instances to be used as markers
 Lazy = _LazyMarker()
 OptionalLazy = _OptionalLazyMarker()
+EagerMarker = _EagerMarker()
+Markers = (Lazy, OptionalLazy, EagerMarker)

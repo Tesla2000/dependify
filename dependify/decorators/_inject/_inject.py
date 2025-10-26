@@ -1,7 +1,9 @@
 from functools import wraps
 
 from dependify._default_container import default_container
-from dependify._dependency_container import DependencyInjectionContainer
+from dependify._dependency_injection_container import (
+    DependencyInjectionContainer,
+)
 
 from ._get_existing_annot import get_existing_annot
 

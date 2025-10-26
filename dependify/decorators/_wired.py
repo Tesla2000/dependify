@@ -5,7 +5,9 @@ from typing import TypeVar
 from typing import Union
 
 from dependify._default_container import default_container
-from dependify._dependency_container import DependencyInjectionContainer
+from dependify._dependency_injection_container import (
+    DependencyInjectionContainer,
+)
 
 from ._injectable import injectable
 from ._injected import EvaluationStrategy
