@@ -81,5 +81,5 @@ class _EagerMarker(Marker):
 # Singleton instances to be used as markers
 Lazy = _LazyMarker()
 OptionalLazy = _OptionalLazyMarker()
-EagerMarker = _EagerMarker()
-Markers = (Lazy, OptionalLazy, EagerMarker)
+Eager = _EagerMarker()
+Markers = (Lazy, OptionalLazy, Eager)
