@@ -3,9 +3,11 @@ __all__ = [
     "injectable",
     "inject",
     "injected",
+    "EvaluationStrategy",
 ]
 
 from ._inject import inject
 from ._injectable import injectable
 from ._injected import injected
+from ._injected import EvaluationStrategy
 from ._wired import wired
