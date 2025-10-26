@@ -8,6 +8,7 @@ from dependify._default_container import default_container
 from dependify._dependency_container import DependencyInjectionContainer
 
 from ._injectable import injectable
+from ._injected import EvaluationStrategy
 from ._injected import injected
 
 class_type = TypeVar("class_type", bound=type)
@@ -20,6 +21,7 @@ def wired(
     cached=False,
     autowire=True,
     validate: bool = True,
+    evaluation_strategy: EvaluationStrategy = EvaluationStrategy.EAGER,
     container: DependencyInjectionContainer = default_container,
 ) -> Union[class_type, Callable[[class_type], class_type]]:
     """
@@ -33,10 +35,16 @@ def wired(
             cached=cached,
             autowire=autowire,
             validate=validate,
+            evaluation_strategy=evaluation_strategy,
             container=container,
         )
     return injectable(
-        injected(class_, validate=validate, container=container),
+        injected(
+            class_,
+            validate=validate,
+            evaluation_strategy=evaluation_strategy,
+            container=container,
+        ),
         patch=patch,
         cached=cached,
         autowire=autowire,

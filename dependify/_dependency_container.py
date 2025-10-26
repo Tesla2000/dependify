@@ -95,7 +95,7 @@ class DependencyInjectionContainer:
     def register(
         self,
         name: Type,
-        target: Union[Type, Callable] = None,
+        target: Union[Callable[[], Type]] = None,
         cached: bool = False,
         autowired: bool = True,
     ) -> None:
