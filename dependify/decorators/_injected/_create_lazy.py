@@ -1,18 +1,17 @@
-from typing import Type
 from typing import TypeVar
 
 from dependify._conditional_result import ConditionalResult
-from dependify._dependency_container import DependencyInjectionContainer
 
 from ._get_class_annotations import get_class_annotations
 from ._protocol_translator import translate_protocol
 from ._validate_arg import validate_arg
+from .property_makers.property_maker import PropertyMaker
 
 ClassType = TypeVar("ClassType", bound=type)
 
 
 def create_lazy(
-    class_: ClassType, validate: bool, container: DependencyInjectionContainer
+    class_: ClassType, validate: bool, property_maker: PropertyMaker
 ) -> ClassType:
     if "__init__" in class_.__dict__:
         prev_init = class_.__init__
@@ -65,33 +64,11 @@ def create_lazy(
 
     class_.__init__ = __init__
 
-    class Empty:
-        pass
-
-    def make_property(field_name_: str, field_type_: Type) -> property:
-        value = Empty()
-        empty_value = value
-
-        def getter(_) -> field_type_:
-            if value != empty_value:
-                return value
-            resolved_value = container.resolve(field_type_)
-            validate_arg(validate, field_type_, resolved_value, field_name_)
-            return resolved_value
-
-        def setter(_, set_value):
-            nonlocal value
-            value = set_value
-
-        def deleter(_):
-            nonlocal value
-            value = Empty()
-
-        return property(
-            getter, setter, deleter, f"I am {field_name_} property"
-        )
-
     for field_name, field_type in class_annotations.items():
         if not hasattr(class_, field_name):
-            setattr(class_, field_name, make_property(field_name, field_type))
+            setattr(
+                class_,
+                field_name,
+                property_maker.make_property(field_name, field_type),
+            )
     return class_
