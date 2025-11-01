@@ -10,6 +10,7 @@ from dependify.decorators._injected._create_init import create_init
 from dependify.decorators._injected._get_class_annotations import (
     get_class_annotations,
 )
+from dependify.decorators._injected._markers import Excluded
 from dependify.decorators._injected._markers import Lazy
 from dependify.decorators._injected._markers import OptionalLazy
 from dependify.decorators._injected.property_makers.optional_property_maker import (
@@ -33,8 +34,14 @@ class EagerCreator(Generic[ClassType]):
         if "__init__" in class_.__dict__:
             return cls._handle_init_provided(class_)
         class_annotations = cls._get_class_annotations(class_)
+        # Filter out Excluded fields for __init__ generation
+        init_annotations = {
+            name: ann
+            for name, ann in class_annotations.items()
+            if Excluded not in getattr(ann, "__metadata__", ())
+        }
         class_.__init__ = create_init(
-            class_, validate, container, class_annotations
+            class_, validate, container, init_annotations
         )
         cls._add_lazy_fields(class_, class_annotations, validate, container)
         return class_

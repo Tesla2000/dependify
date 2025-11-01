@@ -18,6 +18,7 @@ A powerful and flexible dependency injection framework for Python that makes man
   - [Field-level Lazy Evaluation](#field-level-lazy-evaluation)
   - [Optional Lazy Dependencies](#optional-lazy-dependencies)
   - [Performance Benefits](#performance-benefits)
+  - [Excluding Fields from __init__](#excluding-fields-from-__init__)
 - [Generics](#generics)
   - [Basic Generic Usage](#basic-generic-usage)
   - [Multiple Type Parameters](#multiple-type-parameters)
@@ -606,6 +607,112 @@ class ResilientService:
 3. **Keep critical dependencies EAGER**: Configuration, logging, essential services
 4. **Profile before optimizing**: Measure which dependencies benefit most from lazy loading
 5. **Document lazy dependencies**: Make it clear which dependencies are lazy and why
+
+### Excluding Fields from __init__
+
+The `Excluded` marker allows you to define fields that should not be included as parameters in the generated `__init__` method. This is useful for internal state, computed properties, or fields that should be initialized after construction.
+
+#### Basic Usage
+
+```python
+from typing import Annotated
+from dependify import injected, Excluded
+
+@injected
+class Service:
+    name: str                                  # Required in __init__
+    port: int                                  # Required in __init__
+    _cache: Annotated[dict, Excluded]         # NOT in __init__
+    _metrics: Annotated[list, Excluded]       # NOT in __init__
+
+# Only name and port are required
+service = Service(name="MyService", port=8080)
+
+# Excluded fields can be set manually after construction
+service._cache = {}
+service._metrics = []
+```
+
+#### Using __post_init__ to Initialize Excluded Fields
+
+A common pattern is to initialize excluded fields in `__post_init__`:
+
+```python
+@injected
+class Service:
+    name: str
+    _connection_pool: Annotated[dict, Excluded]
+    _initialized: Annotated[bool, Excluded]
+
+    def __post_init__(self):
+        # Initialize excluded fields after construction
+        self._connection_pool = {}
+        self._initialized = True
+
+service = Service(name="MyService")
+print(service._initialized)  # True
+```
+
+#### Combining Excluded with Other Markers
+
+Mix `Excluded` with `Lazy` and `OptionalLazy` for fine-grained control:
+
+```python
+from dependify import wired, Lazy, OptionalLazy, Excluded
+
+@wired
+class ComplexService:
+    # Required parameter
+    name: str
+
+    # Eager dependency
+    logger: Logger
+
+    # Lazy dependency
+    db: Annotated[Database, Lazy]
+
+    # Optional lazy dependency
+    cache: Annotated[Cache, OptionalLazy]
+
+    # Excluded internal state
+    _request_count: Annotated[int, Excluded]
+    _last_request: Annotated[float, Excluded]
+
+    def __post_init__(self):
+        self._request_count = 0
+        self._last_request = 0.0
+```
+
+#### When to Use Excluded
+
+Use `Excluded` for:
+1. **Internal state variables**: `_cache`, `_metrics`, `_state`
+2. **Computed or derived fields**: Fields calculated from other fields
+3. **Fields initialized in __post_init__**: State that depends on other fields
+4. **Implementation details**: Internal bookkeeping not part of the public API
+5. **Temporary or working data**: Data that shouldn't be part of construction
+
+```python
+@injected
+class DataProcessor:
+    source: DataSource
+    config: Configuration
+
+    # Internal state - not constructor parameters
+    _buffer: Annotated[list, Excluded]
+    _processed_count: Annotated[int, Excluded]
+    _last_error: Annotated[Exception | None, Excluded]
+
+    def __post_init__(self):
+        self._buffer = []
+        self._processed_count = 0
+        self._last_error = None
+
+    def process(self, data):
+        self._buffer.append(data)
+        self._processed_count += 1
+        # Process data...
+```
 
 ## Generics
 
@@ -1265,13 +1372,13 @@ class EvaluationStrategy(Enum):
     OPTIONAL_LAZY = "optional_lazy"  # Returns None if not registered
 ```
 
-### Lazy Markers
+### Field Markers
 
 Use with `typing.Annotated` for field-level control:
 
 ```python
 from typing import Annotated
-from dependify import Lazy, OptionalLazy, Eager
+from dependify import Lazy, OptionalLazy, Eager, Excluded
 
 class MyService:
     # Force lazy evaluation for this field
@@ -1282,12 +1389,16 @@ class MyService:
 
     # Force eager evaluation (useful when class is lazy)
     logger: Annotated[Logger, Eager]
+
+    # Exclude field from generated __init__
+    _internal_state: Annotated[dict, Excluded]
 ```
 
 **Available Markers:**
 - `Lazy`: Defers dependency creation until first access
 - `OptionalLazy`: Defers creation and returns `None` if dependency not registered
 - `Eager`: Forces immediate creation (overrides class-level `LAZY`)
+- `Excluded`: Excludes field from generated `__init__` method
 
 ### `DependencyRegistry`
 
@@ -1322,8 +1433,9 @@ with registry:
 4. **Use context managers** for temporary overrides in tests
 5. **Use lazy evaluation** for expensive or conditional dependencies
 6. **Use `OptionalLazy`** for non-critical, optional features
-7. **Avoid circular dependencies** by restructuring your architecture
-8. **Type annotate all dependencies** for better IDE support and validation
+7. **Use `Excluded`** for internal state that shouldn't be constructor parameters
+8. **Avoid circular dependencies** by restructuring your architecture
+9. **Type annotate all dependencies** for better IDE support and validation
 
 ## License
 
