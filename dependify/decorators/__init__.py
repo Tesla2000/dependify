@@ -7,6 +7,7 @@ __all__ = [
     "Lazy",
     "OptionalLazy",
     "Eager",
+    "Excluded",
 ]
 
 from ._inject import inject
@@ -16,4 +17,5 @@ from ._injected import EvaluationStrategy
 from ._injected import Lazy
 from ._injected import OptionalLazy
 from ._injected import Eager
+from ._injected import Excluded
 from ._wired import wired
