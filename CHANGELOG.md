@@ -24,21 +24,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       logger: Logger
   ```
 
-- **Field-level Lazy Markers**: Individual fields can be marked for lazy evaluation using `Annotated`:
+- **Field-level Markers**: Individual fields can be marked with special behaviors using `Annotated`:
   - `Lazy` marker: Forces lazy evaluation for specific field
   - `OptionalLazy` marker: Lazy evaluation that returns `None` if dependency not registered
+  - `Excluded` marker: Excludes field from generated `__init__` method
   ```python
   @injected  # class is EAGER by default
   class Service:
       db: Annotated[Database, Lazy]  # This field is lazy
       cache: Annotated[Cache, OptionalLazy]  # Optional lazy field
       logger: Logger  # This field is eager
+      _internal_state: Annotated[dict, Excluded]  # Not in __init__
   ```
 
 - **Marker Constants**: Added type-safe marker constants to replace string-based annotations:
   - `Lazy`: Singleton marker for lazy field evaluation
   - `OptionalLazy`: Singleton marker for optional lazy field evaluation
   - `Eager`: Singleton marker for explicit eager field evaluation (useful when class is lazy but specific field should be eager)
+  - `Excluded`: Singleton marker to exclude fields from generated `__init__` method
   - All markers inherit from `Marker` base class for type checking
   - Markers are properly hashable and comparable
 
@@ -117,6 +120,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Multiple instances
   - Mixing `Lazy` and `OptionalLazy` markers
 
+- **test_excluded.py** (18 tests): Comprehensive tests for `Excluded` marker
+  - Excluded fields not in `__init__` parameters
+  - Manual assignment after construction
+  - TypeError when providing excluded fields to `__init__`
+  - Multiple excluded fields
+  - Excluded with EAGER strategy
+  - Excluded with LAZY strategy
+  - Excluded with OPTIONAL_LAZY strategy
+  - Mixing Excluded with Lazy markers
+  - `@wired` decorator integration
+  - Default values
+  - `__post_init__` initialization
+  - Class inheritance
+  - Signature verification
+  - Validation
+  - Annotations preservation
+  - Common initialization patterns
+
 ### Documentation
 
 - Added comprehensive docstrings to marker classes explaining usage patterns
@@ -150,15 +171,16 @@ For existing code, no changes are required. The default behavior remains `EAGER`
        ...
    ```
 
-2. **Field-level lazy**: Use `Annotated` with `Lazy` or `OptionalLazy` markers:
+2. **Field-level markers**: Use `Annotated` with markers for fine-grained control:
    ```python
    from typing import Annotated
-   from dependify import injected, Lazy, OptionalLazy
+   from dependify import injected, Lazy, OptionalLazy, Excluded
 
    @injected
    class MyClass:
        expensive: Annotated[ExpensiveService, Lazy]
        optional: Annotated[OptionalService, OptionalLazy]
+       _internal: Annotated[dict, Excluded]  # Not in __init__
    ```
 
 [Unreleased]: https://github.com/yourusername/dependify/compare/v0.1.0...HEAD

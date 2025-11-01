@@ -1,17 +1,20 @@
 """
-Markers for field-level lazy evaluation annotations.
+Markers for field-level annotations.
 
 Usage:
     from typing import Annotated
-    from dependify import Lazy, OptionalLazy
+    from dependify import Lazy, OptionalLazy, Excluded
 
     @injected
     class Service:
-        # This field will be lazily evaluated even if class uses EAGER strategy
+        # This field uses lazy evaluation strategy
         db: Annotated[Database, Lazy]
 
-        # This field will be lazily evaluated and returns None if not registered
+        # This field uses optional lazy evaluation strategy
         cache: Annotated[Cache, OptionalLazy]
+
+        # This field is excluded from the generated __init__
+        internal_state: Annotated[dict, Excluded]
 """
 
 
@@ -78,8 +81,33 @@ class _EagerMarker(Marker):
         return hash("Eager")
 
 
+class _ExcludedMarker(Marker):
+    """
+    Marker class for fields that should be excluded from the generated __init__.
+
+    When used with Annotated, marks a field to be excluded from the constructor,
+    meaning it won't be included as a parameter in __init__.
+
+    Example:
+        @injected
+        class Service:
+            db: Database  # This field is included in __init__
+            internal_state: Annotated[dict, Excluded]  # This field is NOT in __init__
+    """
+
+    def __repr__(self) -> str:
+        return "Excluded"
+
+    def __eq__(self, other) -> bool:
+        return isinstance(other, _ExcludedMarker)
+
+    def __hash__(self) -> int:
+        return hash("Excluded")
+
+
 # Singleton instances to be used as markers
 Lazy = _LazyMarker()
 OptionalLazy = _OptionalLazyMarker()
 Eager = _EagerMarker()
-Markers = (Lazy, OptionalLazy, Eager)
+Excluded = _ExcludedMarker()
+Markers = (Lazy, OptionalLazy, Eager, Excluded)
