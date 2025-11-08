@@ -48,3 +48,17 @@ class Dependency:
                 self.instance = self.target(*args, **kwargs)
             return self.instance
         return self.target(*args, **kwargs)
+
+    def __eq__(self, other):
+        """
+        Check if two Dependency objects are equal based on target, cached, and autowire.
+        """
+        if not isinstance(other, Dependency):
+            return False
+        return self.target == other.target
+
+    def __hash__(self):
+        """
+        Generate hash for Dependency object based on target, cached, and autowire.
+        """
+        return hash((self.target, self.cached, self.autowire))
