@@ -1,8 +1,6 @@
 from functools import partial
-from typing import Callable
 from typing import Optional
 from typing import TypeVar
-from typing import Union
 
 from dependify._default_container import default_container
 from dependify._dependency_injection_container import (
@@ -14,16 +12,16 @@ from .creators import EagerCreator
 from .creators import LazyCreator
 from .creators import OptionalLazyCreator
 
-class_type = TypeVar("class_type", bound=type)
+ClassType = TypeVar("ClassType", bound=type)
 
 
 def injected(
-    class_: Optional[class_type] = None,
+    class_: Optional[ClassType] = None,
     *,
     validate: bool = True,
     evaluation_strategy: EvaluationStrategy = EvaluationStrategy.EAGER,
     container: DependencyInjectionContainer = default_container,
-) -> Union[class_type, Callable[[class_type], class_type]]:
+) -> ClassType:
     """
     Decorator to create default constructor of a class it none present
     """
