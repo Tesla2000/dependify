@@ -13,6 +13,12 @@ A powerful and flexible dependency injection framework for Python that makes man
   - [Patching Dependencies](#patching-dependencies)
   - [Custom Registries](#custom-registries)
 - [Context Managers](#context-managers)
+- [Resolving Multiple Implementations](#resolving-multiple-implementations)
+  - [Basic resolve_all Usage](#basic-resolve_all-usage)
+  - [Plugin Systems](#plugin-systems)
+  - [Event Subscribers](#event-subscribers)
+  - [LIFO Ordering](#lifo-ordering)
+  - [Updating Dependency Settings](#updating-dependency-settings)
 - [Lazy Evaluation](#lazy-evaluation)
   - [Class-level Lazy Evaluation](#class-level-lazy-evaluation)
   - [Field-level Lazy Evaluation](#field-level-lazy-evaluation)
@@ -376,6 +382,309 @@ with prod_registry:
 notifier = NotificationSystem()
 result = notifier.notify_user("user@example.com", "Real message")
 print(result)  # Email sent to user@example.com: Real message
+```
+
+## Resolving Multiple Implementations
+
+Dependify allows you to register multiple implementations for the same type and resolve all of them at once using the `resolve_all` method. This is powerful for plugin systems, event subscribers, middleware pipelines, and chain-of-responsibility patterns.
+
+### Basic resolve_all Usage
+
+Register multiple implementations and resolve all of them:
+
+```python
+from dependify import DependencyInjectionContainer, wired
+
+registry = DependencyInjectionContainer()
+
+# Define an interface
+class NotificationHandler:
+    def send(self, message: str):
+        raise NotImplementedError
+
+@wired(registry=registry)
+class EmailNotification(NotificationHandler):
+    def send(self, message: str):
+        return f"Email: {message}"
+
+@wired(registry=registry)
+class SmsNotification(NotificationHandler):
+    def send(self, message: str):
+        return f"SMS: {message}"
+
+@wired(registry=registry)
+class PushNotification(NotificationHandler):
+    def send(self, message: str):
+        return f"Push: {message}"
+
+# Register all implementations
+registry.register(NotificationHandler, EmailNotification)
+registry.register(NotificationHandler, SmsNotification)
+registry.register(NotificationHandler, PushNotification)
+
+# Resolve all implementations - returns a generator
+for handler in registry.resolve_all(NotificationHandler):
+    print(handler.send("Hello!"))
+
+# Output (in LIFO order - most recent first):
+# Push: Hello!
+# SMS: Hello!
+# Email: Hello!
+
+# Can also convert to list if needed
+all_handlers = list(registry.resolve_all(NotificationHandler))
+print(f"Total handlers: {len(all_handlers)}")  # Total handlers: 3
+```
+
+### Plugin Systems
+
+Build flexible plugin architectures:
+
+```python
+from dependify import DependencyInjectionContainer, wired
+
+registry = DependencyInjectionContainer()
+
+class Plugin:
+    """Base plugin interface"""
+    def process(self, data: str) -> str:
+        raise NotImplementedError
+
+    def get_name(self) -> str:
+        raise NotImplementedError
+
+@wired(registry=registry)
+class ValidationPlugin(Plugin):
+    def process(self, data: str) -> str:
+        return f"Validated: {data}"
+
+    def get_name(self) -> str:
+        return "Validator"
+
+@wired(registry=registry)
+class LoggingPlugin(Plugin):
+    def process(self, data: str) -> str:
+        return f"Logged: {data}"
+
+    def get_name(self) -> str:
+        return "Logger"
+
+@wired(registry=registry)
+class TransformPlugin(Plugin):
+    def process(self, data: str) -> str:
+        return f"Transformed: {data.upper()}"
+
+    def get_name(self) -> str:
+        return "Transformer"
+
+# Register plugins
+registry.register(Plugin, ValidationPlugin)
+registry.register(Plugin, LoggingPlugin)
+registry.register(Plugin, TransformPlugin)
+
+class PluginManager:
+    def __init__(self, registry: DependencyInjectionContainer):
+        self.registry = registry
+
+    def execute_pipeline(self, data: str):
+        """Execute all plugins in sequence"""
+        results = []
+        for plugin in self.registry.resolve_all(Plugin):
+            result = plugin.process(data)
+            results.append(f"[{plugin.get_name()}] {result}")
+        return results
+
+manager = PluginManager(registry)
+outputs = manager.execute_pipeline("user_input")
+for output in outputs:
+    print(output)
+
+# Output (LIFO order):
+# [Transformer] Transformed: USER_INPUT
+# [Logger] Logged: user_input
+# [Validator] Validated: user_input
+```
+
+### Event Subscribers
+
+Implement event-driven architectures:
+
+```python
+from dependify import DependencyInjectionContainer, wired
+
+registry = DependencyInjectionContainer()
+
+class EventSubscriber:
+    def on_user_registered(self, username: str, email: str):
+        raise NotImplementedError
+
+@wired(registry=registry)
+class EmailSubscriber(EventSubscriber):
+    def on_user_registered(self, username: str, email: str):
+        print(f"📧 Sending welcome email to {email}")
+
+@wired(registry=registry)
+class AnalyticsSubscriber(EventSubscriber):
+    def on_user_registered(self, username: str, email: str):
+        print(f"📊 Tracking registration event for {username}")
+
+@wired(registry=registry)
+class SlackSubscriber(EventSubscriber):
+    def on_user_registered(self, username: str, email: str):
+        print(f"💬 Posting to Slack: New user {username}")
+
+# Register all subscribers
+registry.register(EventSubscriber, EmailSubscriber)
+registry.register(EventSubscriber, AnalyticsSubscriber)
+registry.register(EventSubscriber, SlackSubscriber)
+
+class EventBus:
+    def __init__(self, registry: DependencyInjectionContainer):
+        self.registry = registry
+
+    def publish_user_registered(self, username: str, email: str):
+        """Notify all subscribers"""
+        for subscriber in self.registry.resolve_all(EventSubscriber):
+            subscriber.on_user_registered(username, email)
+
+bus = EventBus(registry)
+bus.publish_user_registered("alice", "alice@example.com")
+
+# Output:
+# 💬 Posting to Slack: New user alice
+# 📊 Tracking registration event for alice
+# 📧 Sending welcome email to alice@example.com
+```
+
+### LIFO Ordering
+
+Dependencies are resolved in **LIFO (Last In First Out)** order - the most recently registered implementation appears first:
+
+```python
+from dependify import DependencyInjectionContainer
+
+registry = DependencyInjectionContainer()
+
+class Service:
+    def get_priority(self) -> int:
+        raise NotImplementedError
+
+class LowPriority(Service):
+    def get_priority(self) -> int:
+        return 1
+
+class MediumPriority(Service):
+    def get_priority(self) -> int:
+        return 2
+
+class HighPriority(Service):
+    def get_priority(self) -> int:
+        return 3
+
+# Register in order: Low -> Medium -> High
+registry.register(Service, LowPriority)
+registry.register(Service, MediumPriority)
+registry.register(Service, HighPriority)
+
+# Resolve all - LIFO order means High comes first
+services = list(registry.resolve_all(Service))
+priorities = [s.get_priority() for s in services]
+print(priorities)  # [3, 2, 1] - High, Medium, Low
+
+# Single resolve() returns the most recent (LIFO)
+latest = registry.resolve(Service)
+print(latest.get_priority())  # 3 - HighPriority
+
+# Re-registering moves to the end (most recent)
+registry.register(Service, LowPriority)  # Re-register LowPriority
+services = list(registry.resolve_all(Service))
+priorities = [s.get_priority() for s in services]
+print(priorities)  # [1, 3, 2] - Low is now first (most recent)
+```
+
+### Updating Dependency Settings
+
+Re-registering the same implementation with different settings updates the configuration:
+
+```python
+from dependify import DependencyInjectionContainer
+
+registry = DependencyInjectionContainer()
+
+class CacheService:
+    def __init__(self):
+        self.instance_id = id(self)
+
+# Initial registration - not cached
+registry.register(CacheService, CacheService, cached=False)
+
+service1 = registry.resolve(CacheService)
+service2 = registry.resolve(CacheService)
+print(service1.instance_id == service2.instance_id)  # False - different instances
+
+# Re-register with cached=True to update setting
+registry.register(CacheService, CacheService, cached=True)
+
+service3 = registry.resolve(CacheService)
+service4 = registry.resolve(CacheService)
+print(service3.instance_id == service4.instance_id)  # True - same instance (cached)
+```
+
+### Practical Example: Middleware Pipeline
+
+Build a middleware processing pipeline:
+
+```python
+from dependify import DependencyInjectionContainer, wired
+
+registry = DependencyInjectionContainer()
+
+class Middleware:
+    def process(self, request: dict) -> dict:
+        raise NotImplementedError
+
+@wired(registry=registry)
+class AuthMiddleware(Middleware):
+    def process(self, request: dict) -> dict:
+        request['authenticated'] = True
+        return request
+
+@wired(registry=registry)
+class LoggingMiddleware(Middleware):
+    def process(self, request: dict) -> dict:
+        request['logged'] = True
+        print(f"Logging request: {request.get('path', '/')}")
+        return request
+
+@wired(registry=registry)
+class RateLimitMiddleware(Middleware):
+    def process(self, request: dict) -> dict:
+        request['rate_limited'] = False
+        return request
+
+# Register middleware
+registry.register(Middleware, AuthMiddleware)
+registry.register(Middleware, LoggingMiddleware)
+registry.register(Middleware, RateLimitMiddleware)
+
+class RequestProcessor:
+    def __init__(self, registry: DependencyInjectionContainer):
+        self.registry = registry
+
+    def handle_request(self, request: dict) -> dict:
+        """Process request through middleware pipeline"""
+        for middleware in self.registry.resolve_all(Middleware):
+            request = middleware.process(request)
+        return request
+
+processor = RequestProcessor(registry)
+request = {'path': '/api/users', 'method': 'GET'}
+processed = processor.handle_request(request)
+
+print(processed)
+# Output: Logging request: /api/users
+# {'path': '/api/users', 'method': 'GET', 'rate_limited': False,
+#  'logged': True, 'authenticated': True}
 ```
 
 ## Lazy Evaluation
@@ -1400,16 +1709,24 @@ class MyService:
 - `Eager`: Forces immediate creation (overrides class-level `LAZY`)
 - `Excluded`: Excludes field from generated `__init__` method
 
-### `DependencyRegistry`
+### `DependencyInjectionContainer`
 
 ```python
-class DependencyRegistry:
-    def register(self, name: Type, target: Optional[Union[Type, Callable]] = None, 
+class DependencyInjectionContainer:
+    def register(self, name: Type, target: Optional[Union[Type, Callable]] = None,
                  cached: bool = False, autowired: bool = True) -> None
     def resolve(self, name: Type) -> Any
+    def resolve_all(self, name: Type) -> Generator[Any, None, None]
     def __contains__(self, name: Type) -> bool
     def clear(self) -> None
 ```
+
+**Methods:**
+- `register()`: Register a dependency (can register multiple for same type)
+- `resolve()`: Resolve the most recently registered dependency (LIFO)
+- `resolve_all()`: Resolve all registered dependencies for a type (returns generator in LIFO order)
+- `__contains__()`: Check if a type has registered dependencies
+- `clear()`: Clear all registrations
 
 **Context Manager Support:**
 ```python

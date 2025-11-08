@@ -1,3 +1,4 @@
+from collections import defaultdict
 from contextvars import ContextVar
 from inspect import signature
 from types import MappingProxyType
@@ -26,33 +27,36 @@ class DependencyInjectionContainer:
     It allows you to register dependencies by name and resolve them when needed.
 
     Attributes:
-        _dependencies (Dict[Type, Dependency]): A dictionary that stores the registered dependencies.
+        _dependencies (Dict[Type, List[Dependency]]): A dictionary that stores the registered dependencies.
 
     Methods:
-        __init__(self, dependencies: Dict[str, Dependency]): Initializes a new instance of the `Container` class.
+        __init__(self, dependencies: Dict[str, List[Dependency]]): Initializes a new instance of the `Container` class.
         register_dependency(self, name: Type, dependency: Dependency): Registers a dependency with the specified name.
         register(self, name: Type, target: Type|Callable = None, cached: bool = False, autowired: bool = True): Registers a dependency with the specified name and target.
         resolve(self, name: Type): Resolves a dependency with the specified name.
+        resolve_all(self, name: Type): Resolves all dependencies registered for the specified name.
 
     """
 
-    _base_dependencies: Dict[Type, Dependency]
-    _context_dependencies: ContextVar[Optional[Dict[Type, Dependency]]]
-    _context_stack: ContextVar[List[Dict[Type, Dependency]]]
+    _base_dependencies: Dict[Type, List[Dependency]]
+    _context_dependencies: ContextVar[Optional[Dict[Type, List[Dependency]]]]
+    _context_stack: ContextVar[List[Dict[Type, List[Dependency]]]]
 
-    def __init__(self, dependencies: Optional[Dict[Type, Dependency]] = None):
+    def __init__(
+        self, dependencies: Optional[Dict[Type, List[Dependency]]] = None
+    ):
         """
         Initializes a new instance of the `Container` class.
 
         Args:
-            dependencies (Dict[Type, Dependency], optional): A dictionary of dependencies to be registered. Defaults to an empty dictionary.
+            dependencies (Dict[Type, List[Dependency]], optional): A dictionary of dependencies to be registered. Defaults to an empty dictionary.
         """
-        self._base_dependencies = dependencies or {}
+        self._base_dependencies = defaultdict(list, dependencies or {})
         self._context_dependencies = ContextVar("dependencies", default=None)
         self._context_stack = ContextVar("dep_stack", default=None)
 
     @property
-    def _dependencies(self) -> Dict[Type, Dependency]:
+    def _dependencies(self) -> Dict[Type, List[Dependency]]:
         """
         Returns the current dependencies for this context.
         If in a context manager, returns the context-specific dependencies.
@@ -64,7 +68,7 @@ class DependencyInjectionContainer:
         return self._base_dependencies
 
     @_dependencies.setter
-    def _dependencies(self, value: Dict[Type, Dependency]) -> None:
+    def _dependencies(self, value: Dict[Type, List[Dependency]]) -> None:
         """
         Sets the dependencies for the current context.
         """
@@ -75,7 +79,7 @@ class DependencyInjectionContainer:
             self._base_dependencies = value
 
     @property
-    def _dep_cp(self) -> List[Dict[Type, Dependency]]:
+    def _dep_cp(self) -> List[Dict[Type, List[Dependency]]]:
         """
         Returns the dependency stack for this context.
         """
@@ -88,12 +92,20 @@ class DependencyInjectionContainer:
     def register_dependency(self, name: Type, dependency: Dependency) -> None:
         """
         Registers a dependency with the specified name.
+        If a dependency with the same target already exists, it is removed and the new one
+        is appended to maintain LIFO order.
 
         Args:
             name (Type): The name of the dependency.
             dependency (Dependency): The dependency to be registered.
         """
-        self._dependencies[name] = dependency
+        # Remove existing dependency with same target if it exists
+        # This ensures LIFO order and allows updating cached/autowire settings
+        if dependency in self._dependencies[name]:
+            self._dependencies[name].remove(dependency)
+
+        # Append the new dependency
+        self._dependencies[name].append(dependency)
 
     def register(
         self,
@@ -142,15 +154,19 @@ class DependencyInjectionContainer:
         Returns:
             Any: The resolved dependency, or None if the dependency is not registered.
         """
-        if not (
-            (dependency := self._dependencies.get(name))
-            or (
-                get_origin(name) is Annotated
-                and (args := get_args(name))
-                and (dependency := self._dependencies.get(args[0]))
-            )
-        ):
+        # Get the list of dependencies
+        dependencies_list = self._dependencies.get(name)
+
+        # Handle Annotated types
+        if not dependencies_list and get_origin(name) is Annotated:
+            args = get_args(name)
+            if args:
+                dependencies_list = self._dependencies.get(args[0])
+
+        if not dependencies_list:
             return None
+
+        dependency = dependencies_list[-1]
 
         if not dependency.autowire:
             return dependency.resolve()
@@ -158,26 +174,65 @@ class DependencyInjectionContainer:
         annotation_kwargs = {}
         parameters = signature(dependency.target).parameters
 
-        for name, parameter in parameters.items():
+        for param_name, parameter in parameters.items():
             if parameter.annotation in self._dependencies:
-                annotation_kwargs[name] = self.resolve_optional(
+                annotation_kwargs[param_name] = self.resolve_optional(
                     parameter.annotation
                 )
         annotation_kwargs.update(kwargs)
         return dependency.resolve(**annotation_kwargs)
 
+    def resolve_all(self, name: Type[ResolvedType], **kwargs):
+        """
+        Resolves all dependencies registered for the specified name.
+        Returns a generator that yields dependencies in LIFO order (last registered first).
+
+        Args:
+            name (Type): The name of the dependency.
+
+        Yields:
+            ResolvedType: Each resolved dependency instance.
+        """
+        # Get the list of dependencies
+        dependencies_list = self._dependencies.get(name)
+
+        # Handle Annotated types
+        if not dependencies_list and get_origin(name) is Annotated:
+            args = get_args(name)
+            if args:
+                dependencies_list = self._dependencies.get(args[0])
+
+        if not dependencies_list:
+            return
+
+        # Iterate in reverse order (LIFO - last registered first)
+        for dependency in reversed(dependencies_list):
+            if not dependency.autowire:
+                yield dependency.resolve()
+            else:
+                annotation_kwargs = {}
+                parameters = signature(dependency.target).parameters
+
+                for param_name, parameter in parameters.items():
+                    if parameter.annotation in self._dependencies:
+                        annotation_kwargs[param_name] = self.resolve_optional(
+                            parameter.annotation
+                        )
+                annotation_kwargs.update(kwargs)
+                yield dependency.resolve(**annotation_kwargs)
+
     @property
-    def dependencies(self) -> Mapping[Type, Dependency]:
+    def dependencies(self) -> Mapping[Type, List[Dependency]]:
         """
         Returns a read-only view of the container's dependencies.
         """
         return MappingProxyType(self._dependencies)
 
     def __contains__(self, name: Type) -> bool:
-        return name in self._dependencies
+        return name in self._dependencies and len(self._dependencies[name]) > 0
 
     def clear(self):
-        self._dependencies = {}
+        self._dependencies = defaultdict(list)
 
     def copy(self) -> "DependencyInjectionContainer":
         return type(self)(dependencies=dict(self.dependencies))
@@ -194,7 +249,11 @@ class DependencyInjectionContainer:
         )
 
     def __enter__(self) -> "DependencyInjectionContainer":
-        self._dep_cp.append(self._dependencies.copy())
+        # Deep copy the dependencies - copy both dict and lists
+        copied_deps = defaultdict(list)
+        for key, deps_list in self._dependencies.items():
+            copied_deps[key] = deps_list.copy()
+        self._dep_cp.append(copied_deps)
         return self
 
     def __exit__(
