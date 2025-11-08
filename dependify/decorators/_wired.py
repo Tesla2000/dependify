@@ -1,8 +1,6 @@
 from functools import partial
-from typing import Callable
 from typing import Optional
 from typing import TypeVar
-from typing import Union
 
 from dependify._default_container import default_container
 from dependify._dependency_injection_container import (
@@ -13,11 +11,11 @@ from ._injectable import injectable
 from ._injected import EvaluationStrategy
 from ._injected import injected
 
-class_type = TypeVar("class_type", bound=type)
+ClassType = TypeVar("ClassType", bound=type)
 
 
 def wired(
-    class_: Optional[class_type] = None,
+    class_: Optional[ClassType] = None,
     *,
     patch=None,
     cached=False,
@@ -25,7 +23,7 @@ def wired(
     validate: bool = True,
     evaluation_strategy: EvaluationStrategy = EvaluationStrategy.EAGER,
     container: DependencyInjectionContainer = default_container,
-) -> Union[class_type, Callable[[class_type], class_type]]:
+) -> ClassType:
     """
     Decorator that combines @injectable and @injected decorators.
     Registers a class as injectable and auto-generates constructor with dependency injection.
