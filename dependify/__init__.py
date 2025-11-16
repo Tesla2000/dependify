@@ -30,6 +30,7 @@ C() # No need to pass in A and B since they are injected automatically
 ```
 """
 
+from dependify._class_decorator import ClassDecorator
 from dependify._conditional_result import ConditionalResult
 from dependify._default_container import default_container
 from dependify._default_container import dependencies
@@ -51,21 +52,22 @@ from dependify.decorators import OptionalLazy
 from dependify.decorators import wired
 
 __all__ = [
+    "ClassDecorator",
+    "ConditionalResult",
     "Dependency",
     "DependencyInjectionContainer",
+    "Eager",
+    "Excluded",
+    "Lazy",
+    "OptionalLazy",
+    "default_container",
+    "dependencies",
+    "has",
     "inject",
     "injectable",
     "injected",
-    "wired",
     "register",
     "register_dependency",
     "resolve",
-    "has",
-    "dependencies",
-    "default_container",
-    "ConditionalResult",
-    "Lazy",
-    "OptionalLazy",
-    "Eager",
-    "Excluded",
+    "wired",
 ]
