@@ -14,6 +14,7 @@ from typing import Type
 from typing import TypeVar
 from typing import Union
 
+from dependify._class_decorator import ClassDecorator
 from dependify._dependency import Dependency
 
 ResolvedType = TypeVar("ResolvedType")
@@ -41,6 +42,8 @@ class DependencyInjectionContainer:
     _base_dependencies: Dict[Type, List[Dependency]]
     _context_dependencies: ContextVar[Optional[Dict[Type, List[Dependency]]]]
     _context_stack: ContextVar[List[Dict[Type, List[Dependency]]]]
+    _base_decorators: Dict[Type, List[Union[Type[ClassDecorator], ClassDecorator]]]
+    _decorator_stack: ContextVar[List[Dict[Type, List[Union[Type[ClassDecorator], ClassDecorator]]]]]
 
     def __init__(
         self, dependencies: Optional[Dict[Type, List[Dependency]]] = None
@@ -54,6 +57,8 @@ class DependencyInjectionContainer:
         self._base_dependencies = defaultdict(list, dependencies or {})
         self._context_dependencies = ContextVar("dependencies", default=None)
         self._context_stack = ContextVar("dep_stack", default=None)
+        self._base_decorators = defaultdict(list)
+        self._decorator_stack = ContextVar("decorator_stack", default=None)
 
     @property
     def _dependencies(self) -> Dict[Type, List[Dependency]]:
@@ -77,6 +82,40 @@ class DependencyInjectionContainer:
             stack[-1] = value
         else:
             self._base_dependencies = value
+
+    @property
+    def _decorators(self) -> Dict[Type, List[Union[Type[ClassDecorator], ClassDecorator]]]:
+        """
+        Returns the current decorators for this context.
+        If in a context manager, returns the context-specific decorators.
+        Otherwise, returns the base decorators.
+        """
+        stack = self._decorator_stack.get()
+        if stack and len(stack) > 0:
+            return stack[-1]
+        return self._base_decorators
+
+    @_decorators.setter
+    def _decorators(self, value: Dict[Type, List[Union[Type[ClassDecorator], ClassDecorator]]]) -> None:
+        """
+        Sets the decorators for the current context.
+        """
+        stack = self._decorator_stack.get()
+        if stack:
+            stack[-1] = value
+        else:
+            self._base_decorators = value
+
+    @property
+    def _decorator_cp(self) -> List[Dict[Type, List[Union[Type[ClassDecorator], ClassDecorator]]]]:
+        """
+        Returns the decorator stack for this context.
+        """
+        stack = self._decorator_stack.get()
+        if stack is None:
+            stack = []
+            self._decorator_stack.set(stack)
+        return stack
 
     @property
     def _dep_cp(self) -> List[Dict[Type, List[Dependency]]]:
@@ -127,6 +166,52 @@ class DependencyInjectionContainer:
             target = name
         self.register_dependency(name, Dependency(target, cached, autowired))
 
+    def register_decorator(
+        self,
+        target_class: Type,
+        decorator_class: Union[Type[ClassDecorator], ClassDecorator],
+    ) -> None:
+        """
+        Registers a decorator for a target class.
+
+        Args:
+            target_class (Type): The class to be decorated.
+            decorator_class (Union[Type[ClassDecorator], ClassDecorator]): The decorator class or instance.
+
+        Raises:
+            TypeError: If decorator_class does not inherit from ClassDecorator.
+        """
+        # Validate that decorator inherits from ClassDecorator
+        if isinstance(decorator_class, type):
+            if not issubclass(decorator_class, ClassDecorator):
+                raise TypeError("Decorator class must inherit from ClassDecorator")
+        elif not isinstance(decorator_class, ClassDecorator):
+            raise TypeError("Decorator must inherit from ClassDecorator")
+
+        # Append to list (allow duplicates)
+        self._decorators[target_class].append(decorator_class)
+
+    def resolve_decorators(self, target_class: Type) -> List[ClassDecorator]:
+        """
+        Resolves decorators for a target class.
+
+        Args:
+            target_class (Type): The class to get decorators for.
+
+        Returns:
+            List[ClassDecorator]: List of instantiated decorators.
+        """
+        decorator_classes = self._decorators.get(target_class, [])
+        decorators = []
+        for dec_class in decorator_classes:
+            if isinstance(dec_class, ClassDecorator):
+                # Already an instance
+                decorators.append(dec_class)
+            else:
+                # It's a class, instantiate it
+                decorators.append(dec_class())
+        return decorators
+
     def resolve(self, name: Type[ResolvedType], **kwargs) -> ResolvedType:
         """
         Resolves a dependency with the specified name.
@@ -169,18 +254,39 @@ class DependencyInjectionContainer:
         dependency = dependencies_list[-1]
 
         if not dependency.autowire:
-            return dependency.resolve()
+            result = dependency.resolve()
+        else:
+            annotation_kwargs = {}
+            parameters = signature(dependency.target).parameters
 
-        annotation_kwargs = {}
-        parameters = signature(dependency.target).parameters
+            for param_name, parameter in parameters.items():
+                if parameter.annotation in self._dependencies:
+                    annotation_kwargs[param_name] = self.resolve_optional(
+                        parameter.annotation
+                    )
+            annotation_kwargs.update(kwargs)
+            result = dependency.resolve(**annotation_kwargs)
 
-        for param_name, parameter in parameters.items():
-            if parameter.annotation in self._dependencies:
-                annotation_kwargs[param_name] = self.resolve_optional(
-                    parameter.annotation
+        # Apply decorators to the INSTANCE's class after creation
+        if result is not None:
+            decorators = self.resolve_decorators(name)
+            if decorators:  # Only if there are decorators to apply
+                # Create a fresh copy of the class to avoid global modification
+                original_class = type(result)
+                result_class = type(
+                    original_class.__name__,
+                    original_class.__bases__,
+                    dict(original_class.__dict__)
                 )
-        annotation_kwargs.update(kwargs)
-        return dependency.resolve(**annotation_kwargs)
+
+                # Apply decorators in REVERSE order so first registered = outermost wrapper
+                for decorator in reversed(decorators):
+                    result_class = decorator.decorate(result_class)
+
+                # Change the instance's class to the decorated one
+                result.__class__ = result_class
+
+        return result
 
     def resolve_all(self, name: Type[ResolvedType], **kwargs):
         """
@@ -254,6 +360,13 @@ class DependencyInjectionContainer:
         for key, deps_list in self._dependencies.items():
             copied_deps[key] = deps_list.copy()
         self._dep_cp.append(copied_deps)
+
+        # Deep copy the decorators - copy both dict and lists
+        copied_decorators = defaultdict(list)
+        for key, dec_list in self._decorators.items():
+            copied_decorators[key] = dec_list.copy()
+        self._decorator_cp.append(copied_decorators)
+
         return self
 
     def __exit__(
@@ -262,7 +375,14 @@ class DependencyInjectionContainer:
         exc_val: Optional[BaseException],
         exc_tb: Optional[object],
     ) -> bool:
-        stack = self._context_stack.get()
-        if stack:
-            stack.pop()
+        # Pop dependency stack
+        dep_stack = self._context_stack.get()
+        if dep_stack:
+            dep_stack.pop()
+
+        # Pop decorator stack
+        dec_stack = self._decorator_stack.get()
+        if dec_stack:
+            dec_stack.pop()
+
         return False
