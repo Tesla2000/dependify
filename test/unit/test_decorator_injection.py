@@ -320,8 +320,8 @@ class TestDecoratorInjection(TestCase):
 
     # ========== Re-registration Tests ==========
 
-    def test_reregister_decorator_changes_order(self):
-        """Test that re-registering a decorator changes its position in order"""
+    def test_reregister_decorator_allows_duplicates(self):
+        """Test that re-registering a decorator adds it again (allows duplicates)"""
         order = []
 
         class MyService:
@@ -374,13 +374,14 @@ class TestDecoratorInjection(TestCase):
         self.assertEqual(order, ['A', 'B', 'method'])
         order.clear()
 
-        # Re-register A - should move to end (most recent)
+        # Re-register A - should add it again (duplicate)
         self.container.register_decorator(MyService, DecA)
 
         service2 = self.container.resolve(MyService)
         service2.method()
 
-        self.assertEqual(order, ['B', 'A', 'method'])
+        # Now we have A, B, A - so execution is A, B, A, method
+        self.assertEqual(order, ['A', 'B', 'A', 'method'])
 
     def test_reregister_multiple_times(self):
         """Test re-registering decorators multiple times"""
@@ -452,18 +453,18 @@ class TestDecoratorInjection(TestCase):
         self.assertEqual(order, ['A', 'B', 'C', 'method'])
         order.clear()
 
-        # Re-register B - should move to end
+        # Re-register B - should add it again (allow duplicates)
         self.container.register_decorator(MyService, DecB)
         service = self.container.resolve(MyService)
         service.method()
-        self.assertEqual(order, ['A', 'C', 'B', 'method'])
+        self.assertEqual(order, ['A', 'B', 'C', 'B', 'method'])
         order.clear()
 
-        # Re-register A - should move to end
+        # Re-register A - should add it again (allow duplicates)
         self.container.register_decorator(MyService, DecA)
         service = self.container.resolve(MyService)
         service.method()
-        self.assertEqual(order, ['C', 'B', 'A', 'method'])
+        self.assertEqual(order, ['A', 'B', 'C', 'B', 'A', 'method'])
 
 
     # ========== Container Isolation Tests ==========
