@@ -2,7 +2,7 @@ from collections import defaultdict
 from contextvars import ContextVar
 from inspect import signature
 from types import MappingProxyType, NoneType
-from typing import Annotated
+from typing import Annotated, Any
 from typing import Callable
 from typing import Dict
 from typing import get_args
@@ -228,6 +228,7 @@ class DependencyInjectionContainer:
         resolved = Resolver(self._dependencies, NOT_RESOLVED).resolve(name, **kwargs)
         if resolved is NOT_RESOLVED:
             raise ValueError(f"{name=} couldn't be resolved")
+        self._apply_decorators(resolved, name)
         return resolved
 
     def resolve_optional(
@@ -242,7 +243,30 @@ class DependencyInjectionContainer:
         Returns:
             Any: The resolved dependency, or None if the dependency is not registered.
         """
-        return Resolver(self._dependencies, None).resolve(name, **kwargs)
+        resolved = Resolver(self._dependencies, None).resolve(name, **kwargs)
+        if resolved is None:
+            return resolved
+        self._apply_decorators(resolved, name)
+        return resolved
+
+    def _apply_decorators(self, resolved: Any, name: Type) -> None:
+        if resolved is not None:
+            decorators = self.resolve_decorators(name)
+            if decorators:  # Only if there are decorators to apply
+                # Create a fresh copy of the class to avoid global modification
+                original_class = type(resolved)
+                result_class = type(
+                    original_class.__name__,
+                    original_class.__bases__,
+                    dict(original_class.__dict__)
+                )
+
+                # Apply decorators in REVERSE order so first registered = outermost wrapper
+                for decorator in reversed(decorators):
+                    result_class = decorator.decorate(result_class)
+
+                resolved.__class__ = result_class
+
 
     def resolve_all(self, name: Type[ResolvedType], **kwargs):
         """
