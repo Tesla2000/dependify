@@ -26,6 +26,17 @@ class TestWired(unittest.TestCase):
         client = Client()
         self.assertEqual(client.execute(), "Hello from Service")
 
+    def test_wired_with_null(self):
+        """Test @wired with null"""
+
+        self.container.register(None, lambda: None)
+
+        @wired(container=self.container)
+        class InjectedChild:
+            y: None
+
+        self.container.resolve(InjectedChild)
+
     def test_wired_with_patch_parameter(self):
         class BaseService:
             def get_message(self):
