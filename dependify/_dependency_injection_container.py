@@ -1,7 +1,7 @@
 from collections import defaultdict
 from contextvars import ContextVar
 from inspect import signature
-from types import MappingProxyType
+from types import MappingProxyType, NoneType
 from typing import Annotated
 from typing import Callable
 from typing import Dict
@@ -16,8 +16,8 @@ from typing import Union
 
 from dependify._class_decorator import ClassDecorator
 from dependify._dependency import Dependency
-
-ResolvedType = TypeVar("ResolvedType")
+from dependify._not_resolved import NOT_RESOLVED
+from dependify._resolver import ResolvedType, Resolver
 
 
 class DependencyInjectionContainer:
@@ -164,7 +164,10 @@ class DependencyInjectionContainer:
         """
         if not target:
             target = name
-        self.register_dependency(name, Dependency(target, cached, autowired))
+        dependency = Dependency(target, cached, autowired)
+        self.register_dependency(name, dependency)
+        if name is None:
+            self.register_dependency(NoneType, dependency)
 
     def register_decorator(
         self,
@@ -222,8 +225,8 @@ class DependencyInjectionContainer:
         Returns:
             Any: The resolved dependency, or None if the dependency is not registered.
         """
-        resolved = self.resolve_optional(name, **kwargs)
-        if resolved is None:
+        resolved = Resolver(self._dependencies, NOT_RESOLVED).resolve(name, **kwargs)
+        if resolved is NOT_RESOLVED:
             raise ValueError(f"{name=} couldn't be resolved")
         return resolved
 
@@ -239,54 +242,7 @@ class DependencyInjectionContainer:
         Returns:
             Any: The resolved dependency, or None if the dependency is not registered.
         """
-        # Get the list of dependencies
-        dependencies_list = self._dependencies.get(name)
-
-        # Handle Annotated types
-        if not dependencies_list and get_origin(name) is Annotated:
-            args = get_args(name)
-            if args:
-                dependencies_list = self._dependencies.get(args[0])
-
-        if not dependencies_list:
-            return None
-
-        dependency = dependencies_list[-1]
-
-        if not dependency.autowire:
-            result = dependency.resolve()
-        else:
-            annotation_kwargs = {}
-            parameters = signature(dependency.target).parameters
-
-            for param_name, parameter in parameters.items():
-                if parameter.annotation in self._dependencies:
-                    annotation_kwargs[param_name] = self.resolve_optional(
-                        parameter.annotation
-                    )
-            annotation_kwargs.update(kwargs)
-            result = dependency.resolve(**annotation_kwargs)
-
-        # Apply decorators to the INSTANCE's class after creation
-        if result is not None:
-            decorators = self.resolve_decorators(name)
-            if decorators:  # Only if there are decorators to apply
-                # Create a fresh copy of the class to avoid global modification
-                original_class = type(result)
-                result_class = type(
-                    original_class.__name__,
-                    original_class.__bases__,
-                    dict(original_class.__dict__)
-                )
-
-                # Apply decorators in REVERSE order so first registered = outermost wrapper
-                for decorator in reversed(decorators):
-                    result_class = decorator.decorate(result_class)
-
-                # Change the instance's class to the decorated one
-                result.__class__ = result_class
-
-        return result
+        return Resolver(self._dependencies, None).resolve(name, **kwargs)
 
     def resolve_all(self, name: Type[ResolvedType], **kwargs):
         """

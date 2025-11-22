@@ -1,5 +1,5 @@
 from inspect import signature
-from typing import Protocol
+from typing import Protocol, Optional
 from typing import runtime_checkable
 from unittest import TestCase
 
