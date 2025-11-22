@@ -1,7 +1,7 @@
 from collections import defaultdict
 from contextvars import ContextVar
 from inspect import signature
-from types import MappingProxyType, NoneType
+from types import MappingProxyType
 from typing import Annotated, Any
 from typing import Callable
 from typing import Dict
@@ -167,7 +167,7 @@ class DependencyInjectionContainer:
         dependency = Dependency(target, cached, autowired)
         self.register_dependency(name, dependency)
         if name is None:
-            self.register_dependency(NoneType, dependency)
+            self.register_dependency(type(None), dependency)
 
     def register_decorator(
         self,
