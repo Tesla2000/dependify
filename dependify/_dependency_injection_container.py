@@ -2,7 +2,7 @@ from collections import defaultdict
 from contextvars import ContextVar
 from inspect import signature
 from types import MappingProxyType
-from typing import Annotated, Any
+from typing import Annotated, Any, Generator
 from typing import Callable
 from typing import Dict
 from typing import get_args
@@ -268,7 +268,7 @@ class DependencyInjectionContainer:
                 resolved.__class__ = result_class
 
 
-    def resolve_all(self, name: Type[ResolvedType], **kwargs):
+    def resolve_all(self, name: Type[ResolvedType], **kwargs) -> Generator[ResolvedType, None, None]:
         """
         Resolves all dependencies registered for the specified name.
         Returns a generator that yields dependencies in LIFO order (last registered first).
