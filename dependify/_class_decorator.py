@@ -6,11 +6,13 @@ to enable aspect-oriented programming features like caching, logging, timing,
 transactions, etc.
 """
 
-from abc import ABC, abstractmethod
-from typing import Type, TypeVar
+from abc import ABC
+from abc import abstractmethod
+from typing import Type
+from typing import TypeVar
 
 # Type variable for generic class types
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class ClassDecorator(ABC):

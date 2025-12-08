@@ -1,11 +1,21 @@
 from inspect import signature
-from typing import Union, TypeVar, Type, Generic, get_origin, Annotated, \
-    get_args, Mapping
+from typing import Annotated
+from typing import Generic
+from typing import get_args
+from typing import get_origin
+from typing import Mapping
+from typing import Type
+from typing import TypeVar
+from typing import Union
 
 ResolvedType = TypeVar("ResolvedType")
 UnresolvedValue = TypeVar("UnresolvedValue")
+
+
 class Resolver(Generic[UnresolvedValue]):
-    def __init__(self, dependencies: Mapping, unresolved_value: UnresolvedValue = None):
+    def __init__(
+        self, dependencies: Mapping, unresolved_value: UnresolvedValue = None
+    ):
         self._dependencies = dependencies
         self._unresolved_value = unresolved_value
 

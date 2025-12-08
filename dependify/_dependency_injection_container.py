@@ -2,22 +2,24 @@ from collections import defaultdict
 from contextvars import ContextVar
 from inspect import signature
 from types import MappingProxyType
-from typing import Annotated, Any, Generator
+from typing import Annotated
+from typing import Any
 from typing import Callable
 from typing import Dict
+from typing import Generator
 from typing import get_args
 from typing import get_origin
 from typing import List
 from typing import Mapping
 from typing import Optional
 from typing import Type
-from typing import TypeVar
 from typing import Union
 
 from dependify._class_decorator import ClassDecorator
 from dependify._dependency import Dependency
 from dependify._not_resolved import NOT_RESOLVED
-from dependify._resolver import ResolvedType, Resolver
+from dependify._resolver import ResolvedType
+from dependify._resolver import Resolver
 
 
 class DependencyInjectionContainer:
@@ -42,8 +44,12 @@ class DependencyInjectionContainer:
     _base_dependencies: Dict[Type, List[Dependency]]
     _context_dependencies: ContextVar[Optional[Dict[Type, List[Dependency]]]]
     _context_stack: ContextVar[List[Dict[Type, List[Dependency]]]]
-    _base_decorators: Dict[Type, List[Union[Type[ClassDecorator], ClassDecorator]]]
-    _decorator_stack: ContextVar[List[Dict[Type, List[Union[Type[ClassDecorator], ClassDecorator]]]]]
+    _base_decorators: Dict[
+        Type, List[Union[Type[ClassDecorator], ClassDecorator]]
+    ]
+    _decorator_stack: ContextVar[
+        List[Dict[Type, List[Union[Type[ClassDecorator], ClassDecorator]]]]
+    ]
 
     def __init__(
         self, dependencies: Optional[Dict[Type, List[Dependency]]] = None
@@ -84,7 +90,9 @@ class DependencyInjectionContainer:
             self._base_dependencies = value
 
     @property
-    def _decorators(self) -> Dict[Type, List[Union[Type[ClassDecorator], ClassDecorator]]]:
+    def _decorators(
+        self,
+    ) -> Dict[Type, List[Union[Type[ClassDecorator], ClassDecorator]]]:
         """
         Returns the current decorators for this context.
         If in a context manager, returns the context-specific decorators.
@@ -96,7 +104,10 @@ class DependencyInjectionContainer:
         return self._base_decorators
 
     @_decorators.setter
-    def _decorators(self, value: Dict[Type, List[Union[Type[ClassDecorator], ClassDecorator]]]) -> None:
+    def _decorators(
+        self,
+        value: Dict[Type, List[Union[Type[ClassDecorator], ClassDecorator]]],
+    ) -> None:
         """
         Sets the decorators for the current context.
         """
@@ -107,7 +118,9 @@ class DependencyInjectionContainer:
             self._base_decorators = value
 
     @property
-    def _decorator_cp(self) -> List[Dict[Type, List[Union[Type[ClassDecorator], ClassDecorator]]]]:
+    def _decorator_cp(
+        self,
+    ) -> List[Dict[Type, List[Union[Type[ClassDecorator], ClassDecorator]]]]:
         """
         Returns the decorator stack for this context.
         """
@@ -187,7 +200,9 @@ class DependencyInjectionContainer:
         # Validate that decorator inherits from ClassDecorator
         if isinstance(decorator_class, type):
             if not issubclass(decorator_class, ClassDecorator):
-                raise TypeError("Decorator class must inherit from ClassDecorator")
+                raise TypeError(
+                    "Decorator class must inherit from ClassDecorator"
+                )
         elif not isinstance(decorator_class, ClassDecorator):
             raise TypeError("Decorator must inherit from ClassDecorator")
 
@@ -225,7 +240,9 @@ class DependencyInjectionContainer:
         Returns:
             Any: The resolved dependency, or None if the dependency is not registered.
         """
-        resolved = Resolver(self._dependencies, NOT_RESOLVED).resolve(name, **kwargs)
+        resolved = Resolver(self._dependencies, NOT_RESOLVED).resolve(
+            name, **kwargs
+        )
         if resolved is NOT_RESOLVED:
             raise ValueError(f"{name=} couldn't be resolved")
         self._apply_decorators(resolved, name)
@@ -258,7 +275,7 @@ class DependencyInjectionContainer:
                 result_class = type(
                     original_class.__name__,
                     original_class.__bases__,
-                    dict(original_class.__dict__)
+                    dict(original_class.__dict__),
                 )
 
                 # Apply decorators in REVERSE order so first registered = outermost wrapper
@@ -267,8 +284,9 @@ class DependencyInjectionContainer:
 
                 resolved.__class__ = result_class
 
-
-    def resolve_all(self, name: Type[ResolvedType], **kwargs) -> Generator[ResolvedType, None, None]:
+    def resolve_all(
+        self, name: Type[ResolvedType], **kwargs
+    ) -> Generator[ResolvedType, None, None]:
         """
         Resolves all dependencies registered for the specified name.
         Returns a generator that yields dependencies in LIFO order (last registered first).

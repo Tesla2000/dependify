@@ -13,9 +13,6 @@ from dependify.decorators import inject
 
 from ._markers import Lazy
 from ._markers import OptionalLazy
-from ._protocol_translator import (
-    translate_protocol,
-)
 from ._validate_arg import validate_arg
 
 
@@ -44,10 +41,6 @@ def create_init(
                     f"Keyword argument: {field_name} already provided as a positional argument"
                 )
             field_type = class_annotations[field_name]
-            if getattr(field_type, "_is_protocol", False) and not getattr(
-                field_type, "_is_runtime_protocol", True
-            ):
-                field_type = translate_protocol(field_type)
             if isinstance(value, ConditionalResult):
                 value = value.resolve(self)
             validate_arg(validate, field_type, value, field_name)

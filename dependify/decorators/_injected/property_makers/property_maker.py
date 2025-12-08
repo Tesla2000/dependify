@@ -25,6 +25,7 @@ class PropertyMaker:
             if value != empty_value:
                 return value
             resolved_value = self.container.resolve(field_type_)
+
             validate_arg(
                 self.validate, field_type_, resolved_value, field_name_
             )
