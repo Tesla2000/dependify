@@ -319,8 +319,10 @@ class DependencyInjectionContainer:
 
                 for param_name, parameter in parameters.items():
                     if parameter.annotation in self._dependencies:
-                        annotation_kwargs[param_name] = self.resolve_optional(
-                            parameter.annotation
+                        annotation_kwargs[param_name] = (
+                            kwargs[param_name]
+                            if param_name in kwargs
+                            else self.resolve_optional(parameter.annotation)
                         )
                 annotation_kwargs.update(kwargs)
                 yield dependency.resolve(**annotation_kwargs)
