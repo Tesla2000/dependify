@@ -38,7 +38,10 @@ class DependencyInjectionContainer:
         register(self, name: Type, target: Type|Callable = None, cached: bool = False, autowired: bool = True): Registers a dependency with the specified name and target.
         resolve(self, name: Type): Resolves a dependency with the specified name.
         resolve_all(self, name: Type): Resolves all dependencies registered for the specified name.
-
+        __add__: merges dependencies of registered types
+        __contains__: checks if a type is present it DIC
+        __enter__: enters context. Changes from it are not applied to DIC outside the context
+        __exit__: exits context. Reverts changes assigned during inside
     """
 
     _base_dependencies: Dict[Type, List[Dependency]]
