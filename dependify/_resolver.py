@@ -50,8 +50,9 @@ class Resolver(Generic[UnresolvedValue]):
 
         annotation_kwargs = {}
         if not callable(dependency.target):
-            return dependency.target
-        parameters = signature(dependency.target).parameters
+            parameters = {}
+        else:
+            parameters = signature(dependency.target).parameters
 
         for param_name, parameter in parameters.items():
             if parameter.annotation in self._dependencies:

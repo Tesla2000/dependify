@@ -21,9 +21,17 @@ def injectable(
 ) -> ClassType:
     def decorator(func):
         if patch:
-            register(patch, func, cached, autowire, container)
+            register(
+                patch,
+                func,
+                cached=cached,
+                autowired=autowire,
+                container=container,
+            )
         else:
-            register(func, None, cached, autowire, container)
+            register(
+                func, cached=cached, autowired=autowire, container=container
+            )
 
         return func
 

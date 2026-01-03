@@ -21,6 +21,13 @@ from dependify._resolver import ResolvedType
 from dependify._resolver import Resolver
 
 
+class _NoTarget:
+    pass
+
+
+NO_TARGET = _NoTarget()
+
+
 class DependencyInjectionContainer:
     """
     A class representing a dependency injection container.
@@ -34,7 +41,8 @@ class DependencyInjectionContainer:
     Methods:
         __init__(self, dependencies: Dict[str, List[Dependency]]): Initializes a new instance of the `Container` class.
         register_dependency(self, name: Type, dependency: Dependency): Registers a dependency with the specified name.
-        register(self, name: Type, target: Type|Callable = None, cached: bool = False, autowired: bool = True): Registers a dependency with the specified name and target.
+        register(self, name: Type, target: Any = None, cached: bool = False, autowired: bool = True): Registers a dependency with the specified name and target.
+        remove(self, name: Type, target: Any = None): Removes a dependency or all dependencies with the specified name.
         resolve(self, name: Type): Resolves a dependency with the specified name.
         resolve_all(self, name: Type): Resolves all dependencies registered for the specified name.
         __add__: merges dependencies of registered types
@@ -164,7 +172,7 @@ class DependencyInjectionContainer:
     def register(
         self,
         name: Type,
-        target: Any = None,
+        target: Any = NO_TARGET,
         cached: bool = False,
         autowired: bool = True,
     ) -> None:
@@ -173,16 +181,48 @@ class DependencyInjectionContainer:
 
         Args:
             name (Type): The name of the dependency.
-            target (Type|Callable, optional): The target type or callable to be resolved as the dependency. Defaults to None.
+            target (Any): The target type or callable to be resolved as the dependency. Defaults to None.
             cached (bool, optional): Indicates whether the dependency should be cached. Defaults to False.
             autowired (bool, optional): Indicates whether the dependency should be resolved automatically. Defaults to True.
         """
-        if not target:
+        if target is NO_TARGET:
             target = name
         dependency = Dependency(target, cached, autowired)
         self.register_dependency(name, dependency)
         if name is None:
             self.register_dependency(type(None), dependency)
+
+    def remove(
+        self,
+        name: Type,
+        target: Any = NO_TARGET,
+    ) -> None:
+        """
+        Removes a dependency or all dependencies with the specified name.
+
+        Args:
+            name (Type): The name of the dependency to remove.
+            target (Any): The specific target to remove. If None, removes all dependencies for the name.
+
+        Raises:
+            ValueError: If the dependency is not registered.
+        """
+        if name not in self._dependencies:
+            raise ValueError(f"Dependency {name} is not registered")
+
+        if target is NO_TARGET:
+            del self._dependencies[name]
+        else:
+            dependency_to_remove = Dependency(
+                target, False, True
+            )  # compared by target
+            if dependency_to_remove not in self._dependencies[name]:
+                raise ValueError(
+                    f"Dependency {name} with target {target} is not registered"
+                )
+            self._dependencies[name].remove(dependency_to_remove)
+            if len(self._dependencies[name]) == 0:
+                del self._dependencies[name]
 
     def register_decorator(
         self,
@@ -317,6 +357,9 @@ class DependencyInjectionContainer:
                 yield dependency.resolve()
             else:
                 annotation_kwargs = {}
+                if not callable(dependency.target):
+                    yield dependency.target
+                    continue
                 parameters = signature(dependency.target).parameters
 
                 for param_name, parameter in parameters.items():
