@@ -49,6 +49,8 @@ class Resolver(Generic[UnresolvedValue]):
             return dependency.resolve()
 
         annotation_kwargs = {}
+        if not callable(dependency.target):
+            return dependency.target
         parameters = signature(dependency.target).parameters
 
         for param_name, parameter in parameters.items():

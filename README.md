@@ -12,6 +12,10 @@ A powerful and flexible dependency injection framework for Python that makes man
   - [Caching (Singleton Pattern)](#caching-singleton-pattern)
   - [Patching Dependencies](#patching-dependencies)
   - [Custom Registries](#custom-registries)
+- [Value Dependencies (Non-Callable)](#value-dependencies-non-callable)
+  - [Basic Value Injection](#basic-value-injection)
+  - [Configuration and Constants](#configuration-and-constants)
+  - [Mixing Callable and Non-Callable Dependencies](#mixing-callable-and-non-callable-dependencies)
 - [Context Managers](#context-managers)
 - [Resolving Multiple Implementations](#resolving-multiple-implementations)
   - [Basic resolve_all Usage](#basic-resolve_all-usage)
@@ -292,6 +296,186 @@ print(auth_service.authenticate("alice"))
 print(payment_service.charge("alice", 99.99))
 # Output: Charging alice: Processing $99.99
 ```
+
+## Value Dependencies (Non-Callable)
+
+Dependify supports registering non-callable values (strings, numbers, objects, configurations) as dependencies. When a registered dependency is not callable, it is returned as-is instead of being invoked. This is useful for injecting configuration values, API keys, pre-instantiated objects, and other constants.
+
+### Basic Value Injection
+
+Register and inject simple values like strings, numbers, and objects:
+
+```python
+from dependify import DependencyInjectionContainer, inject
+
+container = DependencyInjectionContainer()
+
+# Register non-callable values
+api_key = "secret_api_key_123"
+port = 8080
+config = {"debug": True, "timeout": 30}
+
+# Register values with type hints
+container.register(str, api_key)
+container.register(int, port)
+container.register(dict, config)
+
+class Service:
+    @inject(container=container)
+    def __init__(self, key: str, server_port: int, cfg: dict):
+        self.key = key
+        self.server_port = server_port
+        self.cfg = cfg
+
+service = Service()
+print(service.key)         # secret_api_key_123
+print(service.server_port) # 8080
+print(service.cfg)         # {'debug': True, 'timeout': 30}
+```
+
+### Configuration and Constants
+
+Use custom types to avoid conflicts when registering multiple values of the same primitive type:
+
+```python
+from dependify import DependencyInjectionContainer, wired
+
+container = DependencyInjectionContainer()
+
+# Define custom types for different configuration values
+class ApiKey:
+    pass
+
+class DatabaseUrl:
+    pass
+
+class CacheTimeout:
+    pass
+
+# Register configuration values
+container.register(ApiKey, "my_api_key_xyz")
+container.register(DatabaseUrl, "postgresql://localhost:5432/mydb")
+container.register(CacheTimeout, 300)
+
+@wired(container=container)
+class Application:
+    api_key: ApiKey
+    db_url: DatabaseUrl
+    cache_timeout: CacheTimeout
+
+    def show_config(self):
+        print(f"API Key: {self.api_key}")
+        print(f"Database: {self.db_url}")
+        print(f"Cache Timeout: {self.cache_timeout}s")
+
+app = Application()
+app.show_config()
+# Output:
+# API Key: my_api_key_xyz
+# Database: postgresql://localhost:5432/mydb
+# Cache Timeout: 300s
+```
+
+### Mixing Callable and Non-Callable Dependencies
+
+Combine regular class dependencies with value dependencies in the same class:
+
+```python
+from dependify import DependencyInjectionContainer, wired
+
+container = DependencyInjectionContainer()
+
+@wired(container=container)
+class Logger:
+    def log(self, message: str):
+        print(f"[LOG] {message}")
+
+@wired(container=container)
+class Database:
+    def query(self, sql: str):
+        return f"Results for: {sql}"
+
+# Register a non-callable API key
+class ApiKey:
+    pass
+
+container.register(ApiKey, "super_secret_key")
+
+@wired(container=container)
+class ApiService:
+    logger: Logger          # Callable - creates new Logger instance
+    db: Database            # Callable - creates new Database instance
+    api_key: ApiKey         # Non-callable - injects the string value
+
+    def fetch_data(self, endpoint: str):
+        self.logger.log(f"Fetching from {endpoint} with key: {self.api_key}")
+        return self.db.query(f"SELECT * FROM {endpoint}")
+
+service = ApiService()
+result = service.fetch_data("users")
+# Output: [LOG] Fetching from users with key: super_secret_key
+print(result)
+# Output: Results for: SELECT * FROM users
+```
+
+### Pre-instantiated Objects
+
+Register already-instantiated objects as dependencies:
+
+```python
+from dependify import DependencyInjectionContainer, wired
+
+container = DependencyInjectionContainer()
+
+class Config:
+    def __init__(self, env: str, debug: bool):
+        self.env = env
+        self.debug = debug
+
+# Create a pre-configured instance
+production_config = Config(env="production", debug=False)
+
+# Register the instance as a value
+container.register(Config, production_config)
+
+@wired(container=container)
+class Application:
+    config: Config
+
+    def show_env(self):
+        return f"Environment: {self.config.env}, Debug: {self.config.debug}"
+
+app = Application()
+print(app.show_env())
+# Output: Environment: production, Debug: False
+
+# All instances share the same config object
+app2 = Application()
+print(app.config is app2.config)  # True
+```
+
+### Best Practices for Value Dependencies
+
+1. **Use custom types for clarity**: Define marker classes to distinguish between different string/int values
+   ```python
+   class ApiKey: pass
+   class DatabaseUrl: pass
+   # Better than registering multiple str types
+   ```
+
+2. **Pre-instantiate complex configurations**: Create configured objects once and inject them
+   ```python
+   config = ComplexConfig(many_params="...")
+   container.register(ComplexConfig, config)
+   ```
+
+3. **Combine with caching**: Non-callable values are naturally singleton, but you can also cache callable dependencies
+   ```python
+   container.register(Logger, cached=True)  # Callable, cached
+   container.register(ApiKey, "key_value")  # Non-callable, always same value
+   ```
+
+4. **Avoid primitive type conflicts**: Don't register multiple different values for `str`, `int`, etc. Use wrapper types instead
 
 ## Context Managers
 
