@@ -1,7 +1,4 @@
 from typing import Any
-from typing import Callable
-from typing import Type
-from typing import Union
 
 
 class Dependency:
@@ -12,11 +9,11 @@ class Dependency:
     cached: bool = False
     autowire: bool = True
     instance: Any = None
-    target: Union[Type, Callable]
+    target: Any
 
     def __init__(
         self,
-        target: Union[Type, Callable],
+        target: Any,
         cached: bool = False,
         autowire: bool = True,
     ):
@@ -24,7 +21,7 @@ class Dependency:
         Initializes a new instance of the `Dependency` class.
 
         Args:
-            target (Callable|Type): The target function or class to resolve the dependency.
+            target (Any): The target function, class or defealt value to resolve the dependency.
             cached (bool, optional): Indicates whether the dependency should be cached. Defaults to False.
             autowire (bool, optional): Indicates whether the dependency arguments should be autowired. Defaults to True.
         """
@@ -43,11 +40,13 @@ class Dependency:
         Returns:
             The resolved dependency object.
         """
-        if self.cached:
-            if not self.instance:
-                self.instance = self.target(*args, **kwargs)
+        if self.cached and self.instance:
             return self.instance
-        return self.target(*args, **kwargs)
+        if callable(self.target):
+            self.instance = self.target(*args, **kwargs)
+        else:
+            self.instance = self.target
+        return self.instance
 
     def __eq__(self, other):
         """

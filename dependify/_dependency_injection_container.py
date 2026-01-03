@@ -4,7 +4,6 @@ from inspect import signature
 from types import MappingProxyType
 from typing import Annotated
 from typing import Any
-from typing import Callable
 from typing import Dict
 from typing import Generator
 from typing import get_args
@@ -165,7 +164,7 @@ class DependencyInjectionContainer:
     def register(
         self,
         name: Type,
-        target: Union[Callable[[], Type]] = None,
+        target: Any = None,
         cached: bool = False,
         autowired: bool = True,
     ) -> None:
