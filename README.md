@@ -42,6 +42,7 @@ A powerful and flexible dependency injection framework for Python that makes man
   - [Complex Service Architecture](#complex-service-architecture)
   - [Testing with Mocks](#testing-with-mocks)
   - [Conditional Dependencies](#conditional-dependencies)
+  - [Removing Dependencies](#removing-dependencies)
 - [API Reference](#api-reference)
 
 ## Installation
@@ -1769,6 +1770,231 @@ print(dev.logger.log("Dev message"))  # [DEBUG] Dev message
 print(test.logger.log("Test message"))  # [TRACE] Test message
 ```
 
+### Removing Dependencies
+
+Dependify allows you to remove dependencies from the container using the `remove()` method. This is useful for cleaning up temporary dependencies, testing scenarios, or dynamically managing your dependency graph.
+
+#### Basic Removal
+
+Remove all dependencies for a type or remove a specific implementation:
+
+```python
+from dependify import DependencyInjectionContainer
+
+container = DependencyInjectionContainer()
+
+class DatabaseService:
+    def connect(self):
+        return "Connected"
+
+# Register the dependency
+container.register(DatabaseService)
+print(DatabaseService in container)  # True
+
+# Remove all dependencies for this type
+container.remove(DatabaseService)
+print(DatabaseService in container)  # False
+
+# Trying to resolve after removal will raise ValueError
+try:
+    container.resolve(DatabaseService)
+except ValueError as e:
+    print(f"Error: {e}")  # Error: name=<class 'DatabaseService'> couldn't be resolved
+```
+
+You can also use the `remove()` convenience function with the default container:
+
+```python
+from dependify import register, remove, has, wired
+
+@wired
+class EmailService:
+    def send(self, msg):
+        return f"Email: {msg}"
+
+# EmailService is automatically registered by @wired
+print(has(EmailService))  # True
+
+# Remove it from the default container
+remove(EmailService)
+print(has(EmailService))  # False
+```
+
+#### Removing Specific Implementations
+
+When multiple implementations are registered, you can remove a specific one:
+
+```python
+from dependify import DependencyInjectionContainer
+
+container = DependencyInjectionContainer()
+
+class NotificationService:
+    pass
+
+class EmailNotification(NotificationService):
+    def send(self):
+        return "Email sent"
+
+class SMSNotification(NotificationService):
+    def send(self):
+        return "SMS sent"
+
+class PushNotification(NotificationService):
+    def send(self):
+        return "Push notification sent"
+
+# Register multiple implementations
+container.register(NotificationService, EmailNotification)
+container.register(NotificationService, SMSNotification)
+container.register(NotificationService, PushNotification)
+
+# Remove specific implementation
+container.remove(NotificationService, SMSNotification)
+
+# Remaining implementations are still available (LIFO order maintained)
+all_notifications = list(container.resolve_all(NotificationService))
+print(len(all_notifications))  # 2 (PushNotification and EmailNotification)
+```
+
+#### Removing Value Dependencies
+
+Non-callable value dependencies can also be removed:
+
+```python
+from dependify import DependencyInjectionContainer
+
+container = DependencyInjectionContainer()
+
+class ApiKey:
+    pass
+
+class DatabaseUrl:
+    pass
+
+# Register value dependencies
+api_key = "secret_key_123"
+db_url = "postgresql://localhost/mydb"
+
+container.register(ApiKey, api_key)
+container.register(DatabaseUrl, db_url)
+
+# Remove specific value
+container.remove(ApiKey, api_key)
+print(ApiKey in container)  # False
+
+# DatabaseUrl is still available
+print(container.resolve(DatabaseUrl))  # postgresql://localhost/mydb
+```
+
+#### Removing Dependencies with None Value
+
+When you need to remove a dependency where the value is actually `None`, use the specific value:
+
+```python
+from dependify import DependencyInjectionContainer
+
+container = DependencyInjectionContainer()
+
+class OptionalConfig:
+    pass
+
+# Register both a class and None as separate dependencies
+container.register(OptionalConfig)  # Registers the class itself
+container.register(OptionalConfig, None)  # Registers None as a value
+
+# Remove the None value specifically
+container.remove(OptionalConfig, None)
+
+# The class dependency is still there
+result = container.resolve(OptionalConfig)
+print(type(result).__name__)  # OptionalConfig
+```
+
+#### Removal in Context Managers
+
+Dependencies removed inside a context manager are restored when exiting:
+
+```python
+from dependify import DependencyInjectionContainer, wired
+
+container = DependencyInjectionContainer()
+
+@wired(container=container)
+class Logger:
+    def log(self, msg):
+        return f"Log: {msg}"
+
+# Logger is registered
+print(Logger in container)  # True
+
+with container:
+    # Remove Logger in context
+    container.remove(Logger)
+    print(Logger in container)  # False
+
+    # Can't resolve inside context
+    try:
+        container.resolve(Logger)
+    except ValueError:
+        print("Logger not available in context")
+
+# Logger is restored after exiting context
+print(Logger in container)  # True
+logger = container.resolve(Logger)
+print(logger.log("Back!"))  # Log: Back!
+```
+
+#### Error Handling
+
+Attempting to remove a non-existent dependency raises a `ValueError`:
+
+```python
+from dependify import DependencyInjectionContainer
+
+container = DependencyInjectionContainer()
+
+class NonExistent:
+    pass
+
+try:
+    container.remove(NonExistent)
+except ValueError as e:
+    print(f"Error: {e}")  # Error: Dependency <class 'NonExistent'> is not registered
+```
+
+#### Use Cases for Removal
+
+1. **Testing**: Remove production dependencies and replace with mocks
+   ```python
+   with container:
+       container.remove(ProductionDatabase)
+       container.register(ProductionDatabase, MockDatabase)
+       # Run tests
+   ```
+
+2. **Dynamic Configuration**: Adjust dependencies based on runtime conditions
+   ```python
+   if not feature_enabled:
+       container.remove(OptionalFeature)
+   ```
+
+3. **Cleanup**: Remove temporary dependencies after use
+   ```python
+   container.register(TempService, temp_instance)
+   # Use temp_instance
+   container.remove(TempService, temp_instance)
+   ```
+
+4. **Plugin Management**: Dynamically load/unload plugins
+   ```python
+   # Load plugin
+   container.register(PluginInterface, MyPlugin)
+
+   # Unload plugin
+   container.remove(PluginInterface, MyPlugin)
+   ```
+
 ### Working with Existing `__init__` Methods
 
 The `@wired` decorator preserves existing `__init__` methods:
@@ -1899,6 +2125,7 @@ class MyService:
 class DependencyInjectionContainer:
     def register(self, name: Type, target: Optional[Union[Type, Callable]] = None,
                  cached: bool = False, autowired: bool = True) -> None
+    def remove(self, name: Type, target: Any = NO_TARGET) -> None
     def resolve(self, name: Type) -> Any
     def resolve_all(self, name: Type) -> Generator[Any, None, None]
     def __contains__(self, name: Type) -> bool
@@ -1907,6 +2134,12 @@ class DependencyInjectionContainer:
 
 **Methods:**
 - `register()`: Register a dependency (can register multiple for same type)
+- `remove()`: Remove a dependency or all dependencies for a type
+  - `name`: The type to remove dependencies for
+  - `target`: The specific target to remove (defaults to `NO_TARGET` which removes all dependencies for the type)
+  - Raises `ValueError` if the dependency is not registered
+  - When used with a specific target, only that implementation is removed
+  - Removal inside a context manager is isolated and reverted on exit
 - `resolve()`: Resolve the most recently registered dependency (LIFO)
 - `resolve_all()`: Resolve all registered dependencies for a type (returns generator in LIFO order)
 - `__contains__()`: Check if a type has registered dependencies
@@ -1918,6 +2151,29 @@ with registry:
     # Temporary registrations
     pass
 # Registrations are reverted here
+```
+
+**NO_TARGET Constant:**
+
+The `NO_TARGET` sentinel value is used to distinguish between removing all dependencies for a type vs. removing a dependency with value `None`:
+
+```python
+from dependify import DependencyInjectionContainer, NO_TARGET
+
+container = DependencyInjectionContainer()
+
+class Config:
+    pass
+
+# Register both a class and None
+container.register(Config)
+container.register(Config, None)
+
+# Remove only the None value
+container.remove(Config, None)  # Removes the dependency with target=None
+
+# Remove all remaining dependencies
+container.remove(Config)  # Same as container.remove(Config, NO_TARGET)
 ```
 
 ### Other Decorators
@@ -1937,6 +2193,8 @@ with registry:
 7. **Use `Excluded`** for internal state that shouldn't be constructor parameters
 8. **Avoid circular dependencies** by restructuring your architecture
 9. **Type annotate all dependencies** for better IDE support and validation
+10. **Use `remove()` with context managers for testing** - Remove and replace dependencies in isolated contexts to avoid affecting global state
+11. **Prefer context managers over direct removal** - When testing, use context managers to ensure dependencies are restored automatically
 
 ## License
 

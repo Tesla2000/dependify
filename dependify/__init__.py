@@ -37,11 +37,13 @@ from dependify._default_container import dependencies
 from dependify._default_container import has
 from dependify._default_container import register
 from dependify._default_container import register_dependency
+from dependify._default_container import remove
 from dependify._default_container import resolve
 from dependify._dependency import Dependency
 from dependify._dependency_injection_container import (
     DependencyInjectionContainer,
 )
+from dependify._dependency_injection_container import NO_TARGET
 from dependify.decorators import Eager
 from dependify.decorators import Excluded
 from dependify.decorators import inject
@@ -59,6 +61,7 @@ __all__ = [
     "Eager",
     "Excluded",
     "Lazy",
+    "NO_TARGET",
     "OptionalLazy",
     "default_container",
     "dependencies",
@@ -68,6 +71,7 @@ __all__ = [
     "injected",
     "register",
     "register_dependency",
+    "remove",
     "resolve",
     "wired",
 ]

@@ -1,11 +1,11 @@
-from typing import Callable
+from typing import Any
 from typing import Type
-from typing import Union
 
 from dependify._dependency import Dependency
 from dependify._dependency_injection_container import (
     DependencyInjectionContainer,
 )
+from dependify._dependency_injection_container import NO_TARGET
 
 default_container = DependencyInjectionContainer()
 
@@ -13,7 +13,7 @@ default_container = DependencyInjectionContainer()
 # Shortcuts
 def register(
     name: Type,
-    target: Union[Type, Callable] = None,
+    target: Any = NO_TARGET,
     cached: bool = False,
     autowired: bool = True,
     container: DependencyInjectionContainer = default_container,
@@ -33,6 +33,17 @@ def register_dependency(
     Registers a dependency with the specified name.
     """
     return container.register_dependency(name, dependency)
+
+
+def remove(
+    name: Type,
+    target: Any = NO_TARGET,
+    container: DependencyInjectionContainer = default_container,
+):
+    """
+    Removes a dependency or all dependencies with the specified name.
+    """
+    return container.remove(name, target)
 
 
 def resolve(name: Type):
