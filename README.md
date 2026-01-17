@@ -29,6 +29,7 @@ A powerful and flexible dependency injection framework for Python that makes man
   - [Optional Lazy Dependencies](#optional-lazy-dependencies)
   - [Performance Benefits](#performance-benefits)
   - [Excluding Fields from __init__](#excluding-fields-from-__init__)
+  - [ClassVar Fields](#classvar-fields)
 - [Generics](#generics)
   - [Basic Generic Usage](#basic-generic-usage)
   - [Multiple Type Parameters](#multiple-type-parameters)
@@ -1207,6 +1208,253 @@ class DataProcessor:
         self._processed_count += 1
         # Process data...
 ```
+
+### ClassVar Fields
+
+Python's `ClassVar` type hint indicates that a field is a class variable shared across all instances. Dependify respects `ClassVar` annotations and does not inject these fields, even if the type is registered in the container. ClassVar fields can be shadowed at the instance level by providing them as constructor parameters.
+
+#### Basic ClassVar Usage
+
+```python
+from typing import ClassVar
+from dependify import injected
+
+@injected
+class Service:
+    instance_count: ClassVar[int] = 0  # Shared across all instances
+    name: str                          # Instance-specific
+
+    def __post_init__(self):
+        Service.instance_count += 1
+
+service1 = Service(name="Service1")
+service2 = Service(name="Service2")
+
+# ClassVar is shared
+print(Service.instance_count)  # 2
+print(service1.instance_count)  # 2 (accessed via class)
+print(service2.instance_count)  # 2
+```
+
+#### ClassVar with Registered Types
+
+ClassVar fields are never injected, even when their type is registered in the container:
+
+```python
+from typing import ClassVar
+from dependify import wired
+
+@wired
+class Logger:
+    def __init__(self):
+        self.level = "INFO"
+
+@wired
+class Service:
+    shared_logger: ClassVar[Logger] = None  # NOT injected
+    instance_logger: Logger                 # IS injected
+    name: str
+
+# Manually set the ClassVar
+Service.shared_logger = Logger()
+Service.shared_logger.level = "DEBUG"
+
+# Create instances - each gets its own injected logger
+service1 = Service(name="Service1")
+service2 = Service(name="Service2")
+
+# Instance loggers are separate (injected)
+print(service1.instance_logger is service2.instance_logger)  # False
+
+# ClassVar is shared
+print(service1.__class__.shared_logger is service2.__class__.shared_logger)  # True
+print(Service.shared_logger.level)  # DEBUG
+```
+
+#### Shadowing ClassVar at Instance Level
+
+ClassVar fields can be shadowed by providing them as constructor parameters, creating instance-specific values:
+
+```python
+from typing import ClassVar
+from dependify import injected
+
+@injected
+class Service:
+    default_timeout: ClassVar[int] = 30  # Class-level default
+    name: str
+
+# Use class default
+service1 = Service(name="Service1")
+print(service1.default_timeout)  # 30 (from class)
+
+# Shadow with instance-specific value
+service2 = Service(name="Service2", default_timeout=60)
+print(service2.default_timeout)  # 60 (instance attribute)
+
+# Class variable unchanged
+print(Service.default_timeout)  # 30
+print(service1.default_timeout)  # 30
+```
+
+#### ClassVar vs Regular Fields
+
+The key difference is that ClassVar fields are not automatically injected:
+
+```python
+from typing import ClassVar
+from dependify import wired
+
+@wired
+class Database:
+    def __init__(self):
+        self.connected = True
+
+@wired
+class Service:
+    shared_db: ClassVar[Database]  # NOT injected (no default)
+    instance_db: Database          # IS injected automatically
+    name: str
+
+# Must manually set ClassVar
+Service.shared_db = Database()
+Service.shared_db.connected = False
+
+service = Service(name="MyService")
+
+# instance_db is injected
+print(service.instance_db.connected)  # True (new instance)
+
+# shared_db is manually set
+print(Service.shared_db.connected)  # False (shared instance)
+print(service.instance_db is Service.shared_db)  # False
+```
+
+#### Complex Scenario with ClassVar
+
+Combine ClassVar with injected dependencies and regular fields:
+
+```python
+from typing import ClassVar
+from dependify import wired
+
+@wired
+class Database:
+    def __init__(self):
+        self.connected = True
+
+@wired
+class Cache:
+    def __init__(self):
+        self.data = {}
+
+@wired
+class Logger:
+    def __init__(self):
+        self.level = "INFO"
+
+@wired
+class Service:
+    # Class-level shared resources (manually managed)
+    global_cache: ClassVar[Cache]
+    metrics_db: ClassVar[Database]
+    instance_count: ClassVar[int] = 0
+
+    # Instance-level injected dependencies
+    logger: Logger
+    db: Database
+
+    # Regular fields
+    name: str
+    port: int = 8080
+
+    def __post_init__(self):
+        Service.instance_count += 1
+
+# Set up shared resources
+Service.global_cache = Cache()
+Service.metrics_db = Database()
+
+# Create instances
+service1 = Service(name="Service1")
+service2 = Service(name="Service2", port=9090)
+
+# Each instance has its own injected dependencies
+print(service1.logger is service2.logger)  # False
+print(service1.db is service2.db)  # False
+
+# But shares ClassVar resources
+print(service1.__class__.global_cache is service2.__class__.global_cache)  # True
+print(Service.instance_count)  # 2
+```
+
+#### When to Use ClassVar
+
+Use `ClassVar` for:
+
+1. **Counters and statistics**: Track instance counts, request counts, etc.
+   ```python
+   instance_count: ClassVar[int] = 0
+   total_requests: ClassVar[int] = 0
+   ```
+
+2. **Shared configuration**: Default values that apply to all instances
+   ```python
+   default_timeout: ClassVar[int] = 30
+   max_retries: ClassVar[int] = 3
+   ```
+
+3. **Shared resources**: Connection pools, caches that should be shared
+   ```python
+   connection_pool: ClassVar[ConnectionPool]
+   shared_cache: ClassVar[Cache]
+   ```
+
+4. **Constants and defaults**: Values that shouldn't be injected
+   ```python
+   VERSION: ClassVar[str] = "1.0.0"
+   DEFAULT_BUFFER_SIZE: ClassVar[int] = 1024
+   ```
+
+5. **Type distinctions**: Clarify which fields are class-level vs instance-level
+   ```python
+   # Clear that these are shared, not per-instance
+   _registry: ClassVar[dict] = {}
+   _instances: ClassVar[list] = []
+   ```
+
+#### Best Practices for ClassVar
+
+1. **Use defaults when possible**: Provide default values for ClassVar fields
+   ```python
+   counter: ClassVar[int] = 0  # Good
+   # vs
+   counter: ClassVar[int]  # Requires explicit assignment
+   ```
+
+2. **Initialize in module or class definition**: Set ClassVar values early
+   ```python
+   @wired
+   class Service:
+       pool: ClassVar[ConnectionPool] = ConnectionPool()
+   ```
+
+3. **Document shared state**: Make it clear when fields are shared
+   ```python
+   @wired
+   class Service:
+       # Shared across all instances - tracks total requests
+       request_count: ClassVar[int] = 0
+   ```
+
+4. **Don't rely on injection for ClassVar**: Always set ClassVar manually
+   ```python
+   # Good
+   Service.shared_logger = Logger()
+
+   # Don't expect this to work (ClassVar is not injected)
+   # Service.shared_logger will remain None unless manually set
+   ```
 
 ## Generics
 

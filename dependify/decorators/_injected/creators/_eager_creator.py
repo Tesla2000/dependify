@@ -6,6 +6,7 @@ from typing import TypeVar
 from dependify._dependency_injection_container import (
     DependencyInjectionContainer,
 )
+from dependify._is_class_var import is_class_var
 from dependify.decorators._injected._create_init import create_init
 from dependify.decorators._injected._get_class_annotations import (
     get_class_annotations,
@@ -73,7 +74,7 @@ class EagerCreator(Generic[ClassType]):
             validate, container
         ), OptionalPropertyMaker(validate, container)
         for field_name, field_type in class_annotations.items():
-            if hasattr(class_, field_name):
+            if hasattr(class_, field_name) or is_class_var(field_type):
                 continue
             metadata = getattr(field_type, "__metadata__", ())
             if Lazy in metadata:
