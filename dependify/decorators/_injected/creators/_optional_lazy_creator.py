@@ -5,6 +5,7 @@ from typing import get_args
 from typing import get_origin
 from typing import TypeVar
 
+from dependify._is_class_var import is_class_var
 from dependify.decorators._injected._get_class_annotations import (
     get_class_annotations,
 )
@@ -27,7 +28,7 @@ class OptionalLazyCreator(EagerCreator[ClassType]):
                     int(Annotated is get_origin(field_annotation))
                     * get_args(field_annotation),
                 )
-            ):
+            ) or is_class_var(field_annotation):
                 continue
             annotations[field_name] = Annotated[field_annotation, OptionalLazy]
         return annotations

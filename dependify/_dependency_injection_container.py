@@ -16,6 +16,7 @@ from typing import Union
 
 from dependify._class_decorator import ClassDecorator
 from dependify._dependency import Dependency
+from dependify._is_class_var import is_class_var
 from dependify._not_resolved import NOT_RESOLVED
 from dependify._resolver import ResolvedType
 from dependify._resolver import Resolver
@@ -161,6 +162,8 @@ class DependencyInjectionContainer:
             name (Type): The name of the dependency.
             dependency (Dependency): The dependency to be registered.
         """
+        if is_class_var(name):
+            raise TypeError("ClassVar can't be registered")
         # Remove existing dependency with same target if it exists
         # This ensures LIFO order and allows updating cached/autowire settings
         if dependency in self._dependencies[name]:
