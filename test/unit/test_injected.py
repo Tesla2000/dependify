@@ -715,11 +715,11 @@ class TestInjected(TestCase):
                 Application("default"),
                 (
                     (
-                        lambda instance: isinstance(instance, AdminService),
+                        lambda class_: issubclass(class_, AdminService),
                         Application("admin"),
                     ),
                     (
-                        lambda instance: isinstance(instance, UserService),
+                        lambda class_: issubclass(class_, UserService),
                         Application("user"),
                     ),
                 ),
@@ -758,3 +758,19 @@ class TestInjected(TestCase):
         instance2 = ServiceWithPostInit(5)
         self.assertTrue(instance2.post_init_called)
         self.assertEqual(instance2.value, 10)
+
+    def test_injected_precedence_over_default(self):
+        container = DependencyInjectionContainer()
+
+        @injectable(container=container)
+        class Application:
+            def __init__(self, role: str):
+                self.role = role
+
+        @injected(container=container)
+        class AdminService:
+            app: Application = Application(role="default")
+
+        container.register(Application, Application(role="injected"))
+
+        self.assertEqual("injected", AdminService().app.role)
