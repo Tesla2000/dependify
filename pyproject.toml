@@ -13,6 +13,9 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+[project.optional-dependencies]
+pydantic = ["pydantic>=2.0.0"]
+
 [project.urls]
 Homepage = "https://github.com/KennethUlloa/dependify"
 
