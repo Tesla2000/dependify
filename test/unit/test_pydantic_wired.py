@@ -2,6 +2,7 @@ import unittest
 from random import random
 from typing import Annotated
 from typing import ClassVar
+from typing import Optional
 
 from dependify import ConditionalResult
 from dependify import DependencyInjectionContainer
@@ -405,7 +406,7 @@ class TestPydanticWired(unittest.TestCase):
             name: str
             tags: list[str] = []
             config: dict[str, int] = {}
-            port: int | None = None
+            port: Optional[int] = None
 
         service = Service(
             name="TestService",
