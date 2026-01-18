@@ -30,15 +30,11 @@ def create_pydantic_wrap_validator(
 ) -> Type[ClassType]:
     annotations = tuple(class_annotations.items())
 
-    @field_validator("*", mode="before")
-    @classmethod
     def _resolve_conditional(cls, value: Any) -> Any:
         if isinstance(value, ConditionalResult):
             return value.resolve(cls)
         return value
 
-    @model_validator(mode="wrap")
-    @classmethod
     def _inject_fields(
         cls: Type[BaseModel],
         data: Any,
@@ -83,8 +79,12 @@ def create_pydantic_wrap_validator(
         class_.__name__,
         (class_,),
         {
-            _inject_fields.__name__: _inject_fields,
-            _resolve_conditional.__name__: _resolve_conditional,
+            _inject_fields.__name__: model_validator(mode="wrap")(
+                classmethod(_inject_fields)
+            ),
+            _resolve_conditional.__name__: field_validator("*", mode="before")(
+                classmethod(_resolve_conditional)
+            ),
         },
     )
     injectable_class.__class__ = class_.__class__
