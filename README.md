@@ -1962,6 +1962,8 @@ print(service.db.queries)  # ["SELECT * FROM table WHERE key='new_key'"]
 
 ### Conditional Dependencies
 
+`ConditionalResult` enables context-aware dependency injection by providing different dependency instances based on the class receiving the injection. The conditional functions receive the **class** (not instance), allowing you to use `issubclass()` checks.
+
 ```python
 from dependify import wired, ConditionalResult, DependencyInjectionContainer, injectable
 
@@ -1995,20 +1997,21 @@ class TestService:
     service_type: str = "test"
 
 
-# Register conditional logger that provides different instances based on context
+# Register conditional logger that provides different instances based on class
+# Note: The lambda receives a CLASS, not an instance - use issubclass(), not isinstance()
 registry.register(
     BaseLogger,
     lambda: ConditionalResult(
         BaseLogger("INFO"),  # Default
         (
-            (lambda instance: isinstance(instance, ProductionService), BaseLogger("ERROR")),
-            (lambda instance: isinstance(instance, DevelopmentService), BaseLogger("DEBUG")),
-            (lambda instance: isinstance(instance, TestService), BaseLogger("TRACE")),
+            (lambda cls: issubclass(cls, ProductionService), BaseLogger("ERROR")),
+            (lambda cls: issubclass(cls, DevelopmentService), BaseLogger("DEBUG")),
+            (lambda cls: issubclass(cls, TestService), BaseLogger("TRACE")),
         )
     )
 )
 
-# Each service gets appropriate logger
+# Each service gets appropriate logger based on its class
 prod = ProductionService()
 dev = DevelopmentService()
 test = TestService()
@@ -2017,6 +2020,14 @@ print(prod.logger.log("Production message"))  # [ERROR] Production message
 print(dev.logger.log("Dev message"))  # [DEBUG] Dev message
 print(test.logger.log("Test message"))  # [TRACE] Test message
 ```
+
+**Key Points:**
+- The condition callable receives a **class (type)**, not an instance
+- Use `issubclass(cls, TargetClass)` to check class relationships
+- Use `cls is TargetClass` for exact class matching
+- Do NOT use `isinstance()` - it won't work as expected
+- Conditions are evaluated in order; the first match wins
+- If no condition matches, the default value is returned
 
 ### Removing Dependencies
 

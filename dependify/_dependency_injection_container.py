@@ -20,13 +20,9 @@ from dependify._is_class_var import is_class_var
 from dependify._not_resolved import NOT_RESOLVED
 from dependify._resolver import ResolvedType
 from dependify._resolver import Resolver
+from dependify._resolver import UnresolvedValue
 
-
-class _NoTarget:
-    pass
-
-
-NO_TARGET = _NoTarget()
+NO_TARGET = object()
 
 
 class DependencyInjectionContainer:
@@ -294,19 +290,15 @@ class DependencyInjectionContainer:
         return resolved
 
     def resolve_optional(
-        self, name: Type[ResolvedType], **kwargs
+        self,
+        name: Type[ResolvedType],
+        unresolved_value: UnresolvedValue = None,
+        **kwargs,
     ) -> Optional[ResolvedType]:
-        """
-        Resolves a dependency with the specified name.
-
-        Args:
-            name (Type): The name of the dependency.
-
-        Returns:
-            Any: The resolved dependency, or None if the dependency is not registered.
-        """
-        resolved = Resolver(self._dependencies, None).resolve(name, **kwargs)
-        if resolved is None:
+        resolved = Resolver(self._dependencies, unresolved_value).resolve(
+            name, **kwargs
+        )
+        if resolved is unresolved_value:
             return resolved
         self._apply_decorators(resolved, name)
         return resolved

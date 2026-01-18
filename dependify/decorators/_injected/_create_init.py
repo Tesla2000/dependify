@@ -1,9 +1,8 @@
 from inspect import Parameter
 from inspect import Signature
 from typing import Any
-from typing import Callable
 from typing import Dict
-from typing import Type
+from typing import TypeVar
 
 from dependify._conditional_result import ConditionalResult
 from dependify._dependency_injection_container import (
@@ -19,13 +18,15 @@ from ._protocol_translator import (
 )
 from ._validate_arg import validate_arg
 
+ClassType = TypeVar("ClassType")
+
 
 def create_init(
-    class_: Type,
+    class_: ClassType,
     validate: bool,
     container: DependencyInjectionContainer,
     class_annotations: Dict[str, Any],
-) -> Callable:
+) -> ClassType:
     annotations = tuple(class_annotations.items())
 
     def __init__(self, *args, **kwargs):
@@ -97,4 +98,5 @@ def create_init(
             )
         )
     )
-    return inject(__init__, container=container)
+    class_.__init__ = inject(__init__, container=container)
+    return class_

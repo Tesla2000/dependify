@@ -8,6 +8,9 @@ from dependify._dependency_injection_container import (
 )
 from dependify._is_class_var import is_class_var
 from dependify.decorators._injected._create_init import create_init
+from dependify.decorators._injected._create_pydantic_wrap_validator import (
+    create_pydantic_wrap_validator,
+)
 from dependify.decorators._injected._get_class_annotations import (
     get_class_annotations,
 )
@@ -20,6 +23,7 @@ from dependify.decorators._injected.property_makers.optional_property_maker impo
 from dependify.decorators._injected.property_makers.property_maker import (
     PropertyMaker,
 )
+from pydantic import BaseModel
 
 ClassType = TypeVar("ClassType", bound=type)
 
@@ -41,9 +45,12 @@ class EagerCreator(Generic[ClassType]):
             for name, ann in class_annotations.items()
             if Excluded not in getattr(ann, "__metadata__", ())
         }
-        class_.__init__ = create_init(
-            class_, validate, container, init_annotations
-        )
+        if issubclass(class_, BaseModel):
+            class_ = create_pydantic_wrap_validator(
+                class_, validate, container, class_annotations
+            )
+        else:
+            class_ = create_init(class_, validate, container, init_annotations)
         cls._add_lazy_fields(class_, class_annotations, validate, container)
         return class_
 
