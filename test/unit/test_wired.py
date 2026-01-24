@@ -1,9 +1,8 @@
 import unittest
 
 from dependify import DependencyInjectionContainer
-from dependify import has
-from dependify import inject
-from dependify import wired
+from dependify import Inject
+from dependify import Wired
 
 
 class TestWired(unittest.TestCase):
@@ -11,6 +10,9 @@ class TestWired(unittest.TestCase):
         self.container = DependencyInjectionContainer()
 
     def test_wired_basic_functionality(self):
+        container = DependencyInjectionContainer()
+        wired = Wired(container)
+
         @wired
         class Service:
             def get_message(self):
@@ -27,28 +29,36 @@ class TestWired(unittest.TestCase):
         self.assertEqual(client.execute(), "Hello from Service")
 
     def test_wired_with_null(self):
-        """Test @wired with null"""
+        """Test @Wired with null"""
 
         self.container.register(None, lambda: None)
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class InjectedChild:
             y: None
 
         self.container.resolve(InjectedChild)
 
     def test_wired_with_patch_parameter(self):
+        container = DependencyInjectionContainer()
+
         class BaseService:
             def get_message(self):
                 return "Base message"
 
-        @wired(patch=BaseService)
+        wired = Wired(container, patch=BaseService)
+
+        @wired
         class MockService:
             def get_message(self):
                 return "Mocked message"
 
-        # When using @wired with patch, the type checking prevents direct injection
-        # Use @inject decorator pattern instead for patch functionality
+        # When using @Wired with patch, the type checking prevents direct injection
+        # Use @Inject decorator pattern instead for patch functionality
+        inject = Inject(container)
+
         class Client:
             @inject
             def __init__(self, service: BaseService):
@@ -61,9 +71,12 @@ class TestWired(unittest.TestCase):
         self.assertEqual(client.execute(), "Mocked message")
 
     def test_wired_with_cached_parameter(self):
+        container = DependencyInjectionContainer()
         counter = 0
 
-        @wired(cached=True)
+        wired_cached = Wired(container, cached=True)
+
+        @wired_cached
         class CachedService:
             def __init__(self):
                 nonlocal counter
@@ -80,6 +93,8 @@ class TestWired(unittest.TestCase):
         self.assertIsNot(service1, service2)
 
         # To test caching, we need to use it as a dependency
+        wired = Wired(container)
+
         @wired
         class Client1:
             service: CachedService
@@ -97,9 +112,12 @@ class TestWired(unittest.TestCase):
         self.assertEqual(client2.service.id, 3)  # Same instance
 
     def test_wired_without_cached(self):
+        container = DependencyInjectionContainer()
         counter = 0
 
-        @wired(cached=False)
+        wired_not_cached = Wired(container, cached=False)
+
+        @wired_not_cached
         class NonCachedService:
             def __init__(self):
                 nonlocal counter
@@ -115,6 +133,8 @@ class TestWired(unittest.TestCase):
         self.assertIsNot(service1, service2)
 
         # Test non-cached behavior as a dependency
+        wired = Wired(container)
+
         @wired
         class Client1:
             service: NonCachedService
@@ -132,6 +152,9 @@ class TestWired(unittest.TestCase):
         self.assertEqual(client2.service.id, 4)
 
     def test_wired_with_autowire_parameter(self):
+        container = DependencyInjectionContainer()
+        wired = Wired(container)
+
         @wired
         class Dependency:
             def get_value(self):
@@ -148,26 +171,31 @@ class TestWired(unittest.TestCase):
     def test_wired_with_custom_container(self):
         custom_container = DependencyInjectionContainer()
 
-        @wired(container=custom_container)
+        wired = Wired(custom_container)
+
+        @wired
         class CustomService:
             def get_message(self):
                 return "Custom container service"
 
-        @wired(container=custom_container)
+        @wired
         class CustomClient:
             service: CustomService
 
             def execute(self):
                 return self.service.get_message()
 
-        # Since @wired uses custom container, we need to create it directly
+        # Since @Wired uses custom container, we need to create it directly
         client = CustomClient()
         self.assertEqual(client.execute(), "Custom container service")
 
         # CustomClient should not be in the default container
-        self.assertFalse(has(CustomClient))
+        self.assertFalse(CustomClient in self.container)
 
     def test_wired_preserves_class_attributes(self):
+        container = DependencyInjectionContainer()
+        wired = Wired(container)
+
         @wired
         class ServiceWithAttributes:
             class_var = "class variable"
@@ -180,6 +208,9 @@ class TestWired(unittest.TestCase):
         self.assertEqual(instance.method(), "method result")
 
     def test_wired_with_multiple_dependencies(self):
+        container = DependencyInjectionContainer()
+        wired = Wired(container)
+
         @wired
         class ServiceA:
             def get_a(self):
@@ -208,6 +239,9 @@ class TestWired(unittest.TestCase):
         self.assertEqual(client.execute(), "ABC")
 
     def test_wired_with_existing_init(self):
+        container = DependencyInjectionContainer()
+        wired = Wired(container)
+
         @wired
         class ServiceWithInit:
             def __init__(self):
@@ -219,6 +253,9 @@ class TestWired(unittest.TestCase):
         self.assertEqual(instance.value, 100)
 
     def test_wired_circular_dependency(self):
+        container = DependencyInjectionContainer()
+        wired = Wired(container)
+
         @wired
         class CircularA:
             b: "CircularB"

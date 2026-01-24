@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import unittest
 
-from dependify import wired
+from dependify import DependencyInjectionContainer
+from dependify import Wired
+
+# Module-level container for module-level decorators
+_container = DependencyInjectionContainer()
+wired = Wired(_container)
 
 
 @wired

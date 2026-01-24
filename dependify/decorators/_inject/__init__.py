@@ -1,3 +1,3 @@
-__all__ = ["inject"]
+__all__ = ["Inject"]
 
-from ._inject import inject
+from ._inject import Inject
