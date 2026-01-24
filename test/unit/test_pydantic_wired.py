@@ -6,7 +6,7 @@ from typing import Optional
 
 from dependify import ConditionalResult
 from dependify import DependencyInjectionContainer
-from dependify import wired
+from dependify import Wired
 from dependify.decorators import EvaluationStrategy
 from dependify.decorators import Excluded
 from dependify.decorators import Lazy
@@ -20,20 +20,21 @@ from typing_extensions import Self
 
 
 class TestPydanticWired(unittest.TestCase):
-    """Test suite for pydantic BaseModel integration with @wired decorator."""
+    """Test suite for pydantic BaseModel integration with @Wired decorator."""
 
     def setUp(self):
         self.container = DependencyInjectionContainer()
+        self.wired = Wired(self.container)
 
     def test_basic_pydantic_model_with_injection(self):
         """Test basic pydantic model with dependency injection"""
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             def log(self, message: str):
                 return f"LOG: {message}"
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             logger: Logger
             name: str
@@ -46,22 +47,22 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_with_multiple_dependencies(self):
         """Test pydantic model with multiple injected dependencies"""
 
-        @wired(container=self.container)
+        @self.wired
         class Database(BaseModel):
             def query(self):
                 return "DB_RESULT"
 
-        @wired(container=self.container)
+        @self.wired
         class Cache(BaseModel):
             def get(self):
                 return "CACHED"
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             def log(self, msg):
                 return f"LOG: {msg}"
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             db: Database
             cache: Cache
@@ -81,11 +82,11 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_with_classvar(self):
         """Test that ClassVar fields are not injected in pydantic models"""
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             level: str = "INFO"
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             shared_logger: ClassVar[Logger] = None
             instance_logger: Logger
@@ -111,12 +112,12 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_with_excluded_fields(self):
         """Test that Excluded fields work with pydantic models"""
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             def log(self, msg):
                 return f"LOG: {msg}"
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             logger: Logger
             name: str
@@ -134,12 +135,12 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_with_field_validators(self):
         """Test pydantic models with field validators and dependency injection"""
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             def log(self, msg):
                 return f"LOG: {msg}"
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             logger: Logger
             name: str
@@ -165,12 +166,12 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_with_pydantic_field(self):
         """Test pydantic models with Field() for validation and metadata"""
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             def log(self, msg):
                 return f"LOG: {msg}"
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             logger: Logger
             name: str = Field(min_length=3, max_length=50)
@@ -195,15 +196,15 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_with_lazy_evaluation(self):
         """Test pydantic models with lazy dependency evaluation"""
 
-        @wired(container=self.container)
+        @self.wired
         class ExpensiveDatabase(BaseModel):
             connected: bool = True
 
-        @wired(container=self.container)
+        @self.wired
         class QuickLogger(BaseModel):
             ready: bool = True
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             logger: QuickLogger
             _db: Annotated[ExpensiveDatabase, Lazy]
@@ -223,7 +224,7 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_with_optional_lazy(self):
         """Test pydantic models with optional lazy dependencies"""
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             def log(self, msg):
                 return f"LOG: {msg}"
@@ -233,7 +234,7 @@ class TestPydanticWired(unittest.TestCase):
             def track(self, event):
                 return f"TRACKED: {event}"
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             logger: Logger
             analytics: Annotated[Analytics, OptionalLazy] = None
@@ -251,12 +252,12 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_with_nested_dependencies(self):
         """Test pydantic models with nested dependency injection"""
 
-        @wired(container=self.container)
+        @self.wired
         class Database(BaseModel):
             def query(self):
                 return "DATA"
 
-        @wired(container=self.container)
+        @self.wired
         class Repository(BaseModel):
             db: Database
             table_name: str
@@ -264,7 +265,7 @@ class TestPydanticWired(unittest.TestCase):
             def get_all(self):
                 return f"{self.table_name}: {self.db.query()}"
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             repo: Repository
             name: str
@@ -286,13 +287,13 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_override_injected_field(self):
         """Test that explicitly provided values override injected dependencies"""
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             level: str = "INFO"
 
         self.container.register(Logger, lambda: Logger(level="DEBUG"))
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             logger: Logger
             name: str
@@ -309,12 +310,12 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_with_model_config(self):
         """Test pydantic models with custom model_config"""
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             def log(self, msg):
                 return f"LOG: {msg}"
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             model_config = {"frozen": True}
 
@@ -335,19 +336,19 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_with_extra_fields(self):
         """Test pydantic models with extra='allow' or extra='forbid'"""
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             def log(self, msg):
                 return f"LOG: {msg}"
 
-        @wired(container=self.container)
+        @self.wired
         class FlexibleService(BaseModel):
             model_config = {"extra": "allow"}
 
             logger: Logger
             name: str
 
-        @wired(container=self.container)
+        @self.wired
         class StrictService(BaseModel):
             model_config = {"extra": "forbid"}
 
@@ -367,18 +368,20 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_cached_dependency(self):
         """Test pydantic models with cached dependencies"""
 
-        @wired(container=self.container, cached=True)
+        wired_cached = Wired(self.container, cached=True)
+
+        @wired_cached
         class SingletonLogger(BaseModel):
             instance_id: int = Field(
                 default_factory=lambda: id(SingletonLogger)
             )
 
-        @wired(container=self.container)
+        @self.wired
         class Service1(BaseModel):
             logger: SingletonLogger
             name: str
 
-        @wired(container=self.container)
+        @self.wired
         class Service2(BaseModel):
             logger: SingletonLogger
             name: str
@@ -395,12 +398,12 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_with_complex_types(self):
         """Test pydantic models with complex field types"""
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             def log(self, msg):
                 return f"LOG: {msg}"
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             logger: Logger
             name: str
@@ -424,17 +427,17 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_inheritance(self):
         """Test pydantic model inheritance with dependency injection"""
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             def log(self, msg):
                 return f"LOG: {msg}"
 
-        @wired(container=self.container)
+        @self.wired
         class BaseService(BaseModel):
             logger: Logger
             name: str
 
-        @wired(container=self.container)
+        @self.wired
         class ExtendedService(BaseService):
             version: str
             debug: bool = False
@@ -450,14 +453,14 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_with_custom_init(self):
         """Test pydantic models with custom __init__ are handled correctly"""
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             def log(self, msg):
                 return f"LOG: {msg}"
 
         # Pydantic doesn't use __init__ in the traditional way
         # Instead we use model_post_init
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             logger: Logger
             name: str
@@ -475,12 +478,12 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_json_serialization(self):
         """Test that pydantic models with injected dependencies can serialize"""
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             def log(self, msg):
                 return f"LOG: {msg}"
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             model_config = {"arbitrary_types_allowed": True}
 
@@ -501,12 +504,12 @@ class TestPydanticWired(unittest.TestCase):
         """Test pydantic models with computed_field and dependency injection"""
         from pydantic import computed_field
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             def log(self, msg):
                 return f"LOG: {msg}"
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             logger: Logger
             name: str
@@ -526,11 +529,13 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_multiple_instances_separate_dependencies(self):
         """Test that multiple instances get separate dependency instances (non-cached)"""
 
-        @wired(container=self.container, cached=False)
+        wired_not_cached = Wired(self.container, cached=False)
+
+        @wired_not_cached
         class Logger(BaseModel):
             logger_id: float = Field(default_factory=random)
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             logger: Logger
             name: str
@@ -547,12 +552,12 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_with_validation_error(self):
         """Test that pydantic validation errors work correctly with injected fields"""
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             def log(self, msg):
                 return f"LOG: {msg}"
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             logger: Logger
             name: str = Field(min_length=5)
@@ -570,18 +575,20 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_with_eager_strategy(self):
         """Test pydantic models with EAGER evaluation strategy"""
 
-        @wired(container=self.container)
+        @self.wired
         class Database(BaseModel):
             connected: bool = True
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             ready: bool = True
 
-        @wired(
-            container=self.container,
+        wired_eager = Wired(
+            self.container,
             evaluation_strategy=EvaluationStrategy.EAGER,
         )
+
+        @wired_eager
         class Service(BaseModel):
             db: Database
             logger: Logger
@@ -598,12 +605,12 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_default_values_with_injection(self):
         """Test pydantic models with default values and injected dependencies"""
 
-        @wired(container=self.container)
+        @self.wired
         class Logger(BaseModel):
             def log(self, msg):
                 return f"LOG: {msg}"
 
-        @wired(container=self.container)
+        @self.wired
         class Service(BaseModel):
             logger: Logger
             name: str = "DefaultService"
@@ -627,19 +634,19 @@ class TestPydanticWired(unittest.TestCase):
     def test_pydantic_model_with_conditional_result(self):
         """Test pydantic models with ConditionalResult for context-aware injection"""
 
-        @wired(container=self.container)
+        @self.wired
         class Application(BaseModel):
             role: str
 
-        @wired(container=self.container)
+        @self.wired
         class AdminService(BaseModel):
             app: Application
 
-        @wired(container=self.container)
+        @self.wired
         class UserService(BaseModel):
             app: Application
 
-        @wired(container=self.container)
+        @self.wired
         class GuestService(BaseModel):
             app: Application
 
@@ -670,11 +677,11 @@ class TestPydanticWired(unittest.TestCase):
         self.assertEqual(guest_service.app.role, "default")
 
     def test_pydantic_validation_applied(self):
-        @wired(container=self.container)
+        @self.wired
         class Application(BaseModel):
             role: str = "too_long"
 
-        @wired(container=self.container)
+        @self.wired
         class GuestService(BaseModel):
             app: Application
 

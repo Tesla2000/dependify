@@ -1,10 +1,11 @@
 from unittest import TestCase
 
-from dependify import default_container
 from dependify import DependencyInjectionContainer
-from dependify import injected
-from dependify import wired
+from dependify import Injected
+from dependify import Wired
 from dependify.decorators import EvaluationStrategy
+
+# self.container removed
 
 
 class TestLazyEvaluation(TestCase):
@@ -12,10 +13,8 @@ class TestLazyEvaluation(TestCase):
 
     def setUp(self):
         """Reset the global container before each test"""
-        default_container.clear()
+        self.container = DependencyInjectionContainer()
         # Reset the instantiation counter
-        global instantiation_counter
-        instantiation_counter = {}
 
     def test_eager_vs_lazy_basic(self):
         """Test that eager creates dependencies immediately while lazy defers creation"""
@@ -26,9 +25,11 @@ class TestLazyEvaluation(TestCase):
                 track_instantiation("Database")
                 self.connected = True
 
-        default_container.register(Database)
+        self.container.register(Database)
 
         # Eager evaluation - should create Database immediately
+        injected = Injected(self.container)
+
         @injected(evaluation_strategy=EvaluationStrategy.EAGER)
         class EagerService:
             db: Database
@@ -43,6 +44,8 @@ class TestLazyEvaluation(TestCase):
         self.assertEqual(get_instantiation_count("Database"), 1)
 
         # Lazy evaluation - should NOT create Database at construction
+        injected = Injected(self.container)
+
         @injected(evaluation_strategy=EvaluationStrategy.LAZY)
         class LazyService:
             db: Database
@@ -74,9 +77,11 @@ class TestLazyEvaluation(TestCase):
                 track_instantiation("Cache")
                 self.size = 100
 
-        default_container.register(Database)
-        default_container.register(Logger)
-        default_container.register(Cache)
+        self.container.register(Database)
+        self.container.register(Logger)
+        self.container.register(Cache)
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.LAZY)
         class LazyService:
@@ -122,9 +127,10 @@ class TestLazyEvaluation(TestCase):
 
         custom_container.register(CustomService)
 
+        injected = Injected(custom_container)
+
         @injected(
             evaluation_strategy=EvaluationStrategy.LAZY,
-            container=custom_container,
         )
         class LazyApp:
             service: CustomService
@@ -149,7 +155,9 @@ class TestLazyEvaluation(TestCase):
                 track_instantiation("Database")
                 self.id = id(self)
 
-        default_container.register(Database, cached=True)
+        self.container.register(Database, cached=True)
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.LAZY)
         class LazyService:
@@ -178,7 +186,9 @@ class TestLazyEvaluation(TestCase):
                 track_instantiation("Database")
                 self.connected = True
 
-        default_container.register(Database)
+        self.container.register(Database)
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.LAZY)
         class LazyService:
@@ -210,7 +220,9 @@ class TestLazyEvaluation(TestCase):
                 track_instantiation("Database")
                 self.connected = True
 
-        default_container.register(Database)
+        self.container.register(Database)
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.LAZY)
         class LazyService:
@@ -243,7 +255,9 @@ class TestLazyEvaluation(TestCase):
                 track_instantiation("Logger")
                 self.level = "INFO"
 
-        default_container.register(Logger)
+        self.container.register(Logger)
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.LAZY)
         class LazyService:
@@ -277,7 +291,8 @@ class TestLazyEvaluation(TestCase):
                 track_instantiation("Database")
                 self.connected = True
 
-        default_container.register(Database)
+        self.container.register(Database)
+        wired = Wired(container=self.container)
 
         @wired(evaluation_strategy=EvaluationStrategy.LAZY)
         class LazyService:
@@ -295,7 +310,7 @@ class TestLazyEvaluation(TestCase):
         self.assertEqual(get_instantiation_count("Database"), 1)
 
         # Verify the class is also registered as injectable
-        self.assertTrue(LazyService in default_container)
+        self.assertTrue(LazyService in self.container)
 
     def test_lazy_with_post_init(self):
         """Test that __post_init__ is called but dependencies remain lazy"""
@@ -305,9 +320,11 @@ class TestLazyEvaluation(TestCase):
                 track_instantiation("Database")
                 self.connected = True
 
-        default_container.register(Database)
+        self.container.register(Database)
 
         post_init_called = False
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.LAZY)
         class LazyService:
@@ -346,13 +363,17 @@ class TestLazyEvaluation(TestCase):
                 track_instantiation("Logger")
                 self.level = "INFO"
 
-        default_container.register(Database)
-        default_container.register(Logger)
+        self.container.register(Database)
+        self.container.register(Logger)
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.LAZY)
         class BaseService:
             db: Database
             name: str
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.LAZY)
         class ExtendedService(BaseService):
@@ -383,7 +404,9 @@ class TestLazyEvaluation(TestCase):
                 track_instantiation("Database")
                 self.id = id(self)
 
-        default_container.register(Database)
+        self.container.register(Database)
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.LAZY)
         class LazyService:
@@ -416,7 +439,9 @@ class TestLazyEvaluation(TestCase):
                 track_instantiation("CachedDatabase")
                 self.id = id(self)
 
-        default_container.register(CachedDatabase, cached=True)
+        self.container.register(CachedDatabase, cached=True)
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.LAZY)
         class LazyService:
@@ -450,7 +475,9 @@ class TestLazyEvaluation(TestCase):
                 track_instantiation("FailingDatabase")
                 raise RuntimeError("Database connection failed")
 
-        default_container.register(FailingDatabase)
+        self.container.register(FailingDatabase)
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.LAZY)
         class LazyService:
@@ -476,7 +503,9 @@ class TestLazyEvaluation(TestCase):
                 track_instantiation("Database")
                 self.connected = True
 
-        default_container.register(Database)
+        self.container.register(Database)
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.LAZY, validate=True)
         class LazyService:

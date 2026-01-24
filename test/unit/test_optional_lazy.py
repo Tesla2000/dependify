@@ -1,21 +1,19 @@
 from unittest import TestCase
 
-from dependify import default_container
 from dependify import DependencyInjectionContainer
-from dependify import injected
-from dependify import wired
+from dependify import Injected
+from dependify import Wired
 from dependify.decorators import EvaluationStrategy
+
+# self.container removed
 
 
 class TestOptionalLazyEvaluation(TestCase):
     """Test suite for OPTIONAL_LAZY evaluation strategy in dependency injection."""
 
     def setUp(self):
-        """Reset the global container before each test"""
-        default_container.clear()
-        # Reset the instantiation counter
-        global instantiation_counter
-        instantiation_counter = {}
+        """Reset the container before each test"""
+        self.container = DependencyInjectionContainer()
 
     def test_optional_lazy_vs_lazy_missing_dependency(self):
         """Test that LAZY throws error while OPTIONAL_LAZY returns None for missing dependencies"""
@@ -26,6 +24,8 @@ class TestOptionalLazyEvaluation(TestCase):
                 self.name = "unregistered"
 
         # LAZY should throw an error when dependency is missing
+        injected = Injected(self.container)
+
         @injected(evaluation_strategy=EvaluationStrategy.LAZY)
         class LazyService:
             service: UnregisteredService
@@ -40,6 +40,8 @@ class TestOptionalLazyEvaluation(TestCase):
         self.assertIn("couldn't be resolved", str(cm.exception))
 
         # OPTIONAL_LAZY should return None for missing dependency
+        injected = Injected(self.container)
+
         @injected(evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY)
         class OptionalLazyService:
             service: UnregisteredService
@@ -60,7 +62,9 @@ class TestOptionalLazyEvaluation(TestCase):
                 track_instantiation("Database")
                 self.connected = True
 
-        default_container.register(Database)
+        self.container.register(Database)
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY)
         class OptionalLazyService:
@@ -98,8 +102,10 @@ class TestOptionalLazyEvaluation(TestCase):
                 self.size = 100
 
         # Only register Database and Logger, not Cache
-        default_container.register(Database)
-        default_container.register(Logger)
+        self.container.register(Database)
+        self.container.register(Logger)
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY)
         class OptionalLazyService:
@@ -147,9 +153,10 @@ class TestOptionalLazyEvaluation(TestCase):
         # Only register RegisteredService
         custom_container.register(RegisteredService)
 
+        injected = Injected(custom_container)
+
         @injected(
             evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY,
-            container=custom_container,
         )
         class OptionalLazyApp:
             registered: RegisteredService
@@ -180,6 +187,8 @@ class TestOptionalLazyEvaluation(TestCase):
             def __init__(self):
                 track_instantiation("UnregisteredService")
                 self.name = "manual"
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY)
         class OptionalLazyService:
@@ -218,7 +227,8 @@ class TestOptionalLazyEvaluation(TestCase):
                 track_instantiation("UnregisteredService")
                 self.name = "unregistered"
 
-        default_container.register(RegisteredService)
+        self.container.register(RegisteredService)
+        wired = Wired(self.container)
 
         @wired(evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY)
         class OptionalLazyService:
@@ -244,7 +254,7 @@ class TestOptionalLazyEvaluation(TestCase):
         self.assertEqual(get_instantiation_count("UnregisteredService"), 0)
 
         # Verify the class is registered as injectable
-        self.assertTrue(OptionalLazyService in default_container)
+        self.assertTrue(OptionalLazyService in self.container)
 
     def test_optional_lazy_all_unregistered(self):
         """Test OPTIONAL_LAZY with all dependencies unregistered"""
@@ -262,6 +272,8 @@ class TestOptionalLazyEvaluation(TestCase):
                 track_instantiation("Service3")
 
         # Don't register any services
+        injected = Injected(self.container)
+
         @injected(evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY)
         class OptionalLazyService:
             service1: Service1
@@ -288,6 +300,8 @@ class TestOptionalLazyEvaluation(TestCase):
         class UnregisteredLogger:
             def __init__(self):
                 track_instantiation("UnregisteredLogger")
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY)
         class OptionalLazyService:
@@ -319,6 +333,8 @@ class TestOptionalLazyEvaluation(TestCase):
                 track_instantiation("UnregisteredDatabase")
 
         post_init_called = False
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY)
         class OptionalLazyService:
@@ -352,6 +368,8 @@ class TestOptionalLazyEvaluation(TestCase):
                 self.name = "optional"
 
         # Don't register OptionalService
+        injected = Injected(self.container)
+
         @injected(evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY)
         class OptionalLazyApp:
             service: OptionalService
@@ -379,6 +397,8 @@ class TestOptionalLazyEvaluation(TestCase):
         class UnregisteredDatabase:
             def __init__(self):
                 track_instantiation("UnregisteredDatabase")
+
+        injected = Injected(self.container)
 
         @injected(
             evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY, validate=True
@@ -416,17 +436,19 @@ class TestOptionalLazyEvaluation(TestCase):
         # Only register in container1
         container1.register(SharedService)
 
+        injected = Injected(container1)
+
         @injected(
             evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY,
-            container=container1,
         )
         class App1:
             service: SharedService
             name: str
 
+        injected = Injected(container2)
+
         @injected(
             evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY,
-            container=container2,
         )
         class App2:
             service: SharedService
@@ -456,7 +478,9 @@ class TestOptionalLazyEvaluation(TestCase):
                 track_instantiation("Database")
                 self.id = id(self)
 
-        default_container.register(Database, cached=True)
+        self.container.register(Database, cached=True)
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY)
         class OptionalLazyService:
@@ -490,12 +514,16 @@ class TestOptionalLazyEvaluation(TestCase):
                 track_instantiation("UnregisteredService")
                 self.name = "unregistered"
 
-        default_container.register(RegisteredService)
+        self.container.register(RegisteredService)
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY)
         class BaseService:
             registered: RegisteredService
             name: str
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY)
         class ExtendedService(BaseService):
@@ -528,7 +556,9 @@ class TestOptionalLazyEvaluation(TestCase):
                 track_instantiation("FailingDatabase")
                 raise RuntimeError("Database connection failed")
 
-        default_container.register(FailingDatabase)
+        self.container.register(FailingDatabase)
+
+        injected = Injected(self.container)
 
         @injected(evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY)
         class OptionalLazyService:

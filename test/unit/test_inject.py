@@ -1,14 +1,14 @@
 from unittest import TestCase
 
 from dependify import DependencyInjectionContainer
-from dependify import inject
+from dependify import Inject
 
 
 class TestInject(TestCase):
 
     def test_inject_with_container(self):
         """
-        Test if the `inject` decorator can be used with a custom container.
+        Test if the `Inject` decorator can be used with a custom container.
         """
 
         class A:
@@ -17,7 +17,9 @@ class TestInject(TestCase):
         container = DependencyInjectionContainer()
         container.register(A)
 
-        @inject(container=container)
+        inject = Inject(container)
+
+        @inject
         def test(a: A):
             self.assertIsInstance(a, A)
 

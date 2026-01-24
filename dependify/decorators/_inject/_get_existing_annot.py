@@ -2,14 +2,13 @@ from inspect import signature
 from typing import Dict
 from typing import Type
 
-from dependify._default_container import default_container
 from dependify._dependency_injection_container import (
     DependencyInjectionContainer,
 )
 
 
 def get_existing_annot(
-    f, container: DependencyInjectionContainer = default_container
+    f, container: DependencyInjectionContainer
 ) -> Dict[str, Type]:
     """
     Get the existing annotations in a function.
