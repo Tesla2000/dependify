@@ -2,10 +2,10 @@ from typing import Annotated
 from unittest import TestCase
 
 from dependify import DependencyInjectionContainer
-from dependify import injected
+from dependify import Injected
 from dependify import Lazy
 from dependify import OptionalLazy
-from dependify import wired
+from dependify import Wired
 from dependify.decorators import EvaluationStrategy
 
 
@@ -32,7 +32,9 @@ class TestFieldLevelLazy(TestCase):
         self.container.register(Logger)
 
         # Class uses EAGER by default, but db field is marked lazy
-        @injected(container=self.container)  # defaults to EAGER
+        injected = Injected(self.container)
+
+        @injected  # defaults to EAGER
         class Service:
             db: Annotated[Database, Lazy]  # This field should be lazy
             logger: Logger  # This field should be eager
@@ -69,7 +71,9 @@ class TestFieldLevelLazy(TestCase):
         self.container.register(Cache)
         self.container.register(Logger)
 
-        @injected(container=self.container)  # defaults to EAGER
+        injected = Injected(self.container)
+
+        @injected  # defaults to EAGER
         class Service:
             db: Annotated[Database, Lazy]
             cache: Annotated[Cache, Lazy]
@@ -109,8 +113,9 @@ class TestFieldLevelLazy(TestCase):
         self.container.register(Logger)
 
         # Class uses LAZY, field also marked lazy (should be redundant but valid)
+        injected = Injected(self.container)
+
         @injected(
-            container=self.container,
             evaluation_strategy=EvaluationStrategy.LAZY,
         )
         class Service:
@@ -149,7 +154,9 @@ class TestFieldLevelLazy(TestCase):
         self.container.register(RegisteredService)
         # Don't register UnregisteredService
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             registered: Annotated[RegisteredService, Lazy]
             unregistered: Annotated[UnregisteredService, OptionalLazy]
@@ -188,7 +195,9 @@ class TestFieldLevelLazy(TestCase):
         # Only register one service
         self.container.register(RegisteredService)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             registered: Annotated[RegisteredService, OptionalLazy]
             unregistered: Annotated[UnregisteredService, OptionalLazy]
@@ -224,7 +233,9 @@ class TestFieldLevelLazy(TestCase):
                 track_instantiation("Service2")
 
         # Don't register any services
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class App:
             service1: Annotated[Service1, OptionalLazy]
             service2: Annotated[Service2, OptionalLazy]
@@ -248,7 +259,9 @@ class TestFieldLevelLazy(TestCase):
                 self.name = "manual"
 
         # Don't register the service
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             optional_service: Annotated[UnregisteredService, OptionalLazy]
             name: str
@@ -280,7 +293,9 @@ class TestFieldLevelLazy(TestCase):
         # Only register RequiredService
         self.container.register(RequiredService)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             required: Annotated[RequiredService, Lazy]
             optional: Annotated[OptionalService, OptionalLazy]
@@ -313,7 +328,9 @@ class TestFieldLevelLazy(TestCase):
 
         self.container.register(Database)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             db: Annotated[Database, Lazy]
             name: str
@@ -348,7 +365,9 @@ class TestFieldLevelLazy(TestCase):
         self.container.register(Database)
         self.container.register(Logger)
 
-        @wired(container=self.container)  # defaults to EAGER
+        wired = Wired(self.container)
+
+        @wired  # defaults to EAGER
         class Service:
             db: Annotated[Database, Lazy]
             logger: Logger
@@ -374,7 +393,9 @@ class TestFieldLevelLazy(TestCase):
 
         self.container.register(Logger)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             logger: Annotated[Logger, Lazy]
             name: str
@@ -405,7 +426,9 @@ class TestFieldLevelLazy(TestCase):
 
         self.container.register(Database, cached=True)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             db: Annotated[Database, Lazy]
             name: str
@@ -439,7 +462,9 @@ class TestFieldLevelLazy(TestCase):
         custom_container.register(Service1)
         custom_container.register(Service2)
 
-        @injected(container=custom_container)
+        injected = Injected(custom_container)
+
+        @injected
         class App:
             service1: Annotated[Service1, Lazy]
             service2: Service2  # eager
@@ -475,13 +500,17 @@ class TestFieldLevelLazy(TestCase):
         self.container.register(Logger)
         self.container.register(Cache)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class BaseService:
             db: Annotated[Database, Lazy]
             logger: Logger  # eager
             name: str
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class ExtendedService(BaseService):
             cache: Annotated[Cache, Lazy]
 
@@ -527,7 +556,9 @@ class TestFieldLevelLazy(TestCase):
         self.container.register(Service3)
         self.container.register(ExpensiveService)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class App:
             service1: Service1
             service2: Service2
@@ -557,7 +588,9 @@ class TestFieldLevelLazy(TestCase):
 
         self.container.register(Database)
 
-        @injected(container=self.container, validate=True)
+        injected = Injected(self.container)
+
+        @injected(validate=True)
         class Service:
             db: Annotated[Database, Lazy]
             name: str
@@ -588,7 +621,9 @@ class TestFieldLevelLazy(TestCase):
 
         post_init_called = False
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             db: Annotated[Database, Lazy]
             name: str
@@ -621,7 +656,9 @@ class TestFieldLevelLazy(TestCase):
 
         self.container.register(FailingDatabase)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             db: Annotated[FailingDatabase, Lazy]
             name: str
@@ -646,7 +683,9 @@ class TestFieldLevelLazy(TestCase):
 
         self.container.register(Database)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             db: Annotated[Database, Lazy]
             name: str

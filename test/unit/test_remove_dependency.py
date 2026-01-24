@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from dependify import DependencyInjectionContainer
-from dependify import wired
+from dependify import Wired
 
 
 class TestRemoveDependency(TestCase):
@@ -253,16 +253,18 @@ class TestRemoveDependency(TestCase):
 
     def test_remove_with_wired_decorator(self):
         """
-        Test that removing a dependency affects @wired classes.
+        Test that removing a dependency affects @Wired classes.
         """
         container = DependencyInjectionContainer()
 
-        @wired(container=container)
+        wired = Wired(container)
+
+        @wired
         class Logger:
             def log(self, msg):
                 return f"Log: {msg}"
 
-        @wired(container=container)
+        @wired
         class Service:
             logger: Logger
 

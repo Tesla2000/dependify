@@ -4,10 +4,9 @@ from typing import runtime_checkable
 from unittest import TestCase
 
 from dependify import ConditionalResult
-from dependify import default_container
 from dependify import DependencyInjectionContainer
-from dependify import injectable
-from dependify import injected
+from dependify import Injectable
+from dependify import Injected
 
 
 class TestInjected(TestCase):
@@ -15,9 +14,11 @@ class TestInjected(TestCase):
         self.container = DependencyInjectionContainer()
 
     def test_injected_basic_functionality(self):
-        """Test basic @injected functionality with simple class"""
+        """Test basic @Injected functionality with simple class"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Person:
             name: str
             age: int
@@ -38,10 +39,12 @@ class TestInjected(TestCase):
         self.assertEqual(person3.age, 35)
 
     def test_injected_with_existing_init(self):
-        """Test that @injected doesn't override existing __init__"""
+        """Test that @Injected doesn't override existing __init__"""
         init_called = False
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class CustomClass:
             def __init__(self, x: int):
                 nonlocal init_called
@@ -53,19 +56,23 @@ class TestInjected(TestCase):
         self.assertEqual(obj.x, 10)
 
     def test_injected_with_dependency_injection(self):
-        """Test @injected with automatic dependency injection"""
+        """Test @Injected with automatic dependency injection"""
 
-        @injectable(container=self.container)
+        injectable = Injectable(self.container)
+
+        @injectable
         class Database:
             def __init__(self):
                 self.connected = True
 
-        @injectable(container=self.container)
+        @injectable
         class Logger:
             def __init__(self):
                 self.level = "INFO"
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             db: Database
             logger: Logger
@@ -89,7 +96,9 @@ class TestInjected(TestCase):
     def test_injected_with_no_annotations(self):
         """Test @injected with class that has no annotations"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Empty:
             pass
 
@@ -100,7 +109,9 @@ class TestInjected(TestCase):
     def test_injected_type_checking(self):
         """Test type checking in generated __init__"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class TypedClass:
             name: str
             count: int
@@ -125,7 +136,9 @@ class TestInjected(TestCase):
     def test_injected_error_cases(self):
         """Test various error cases"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class TestClass:
             x: int
             y: str
@@ -157,7 +170,9 @@ class TestInjected(TestCase):
     def test_injected_with_inheritance(self):
         """Test @injected with class inheritance"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Base:
             x: int
 
@@ -172,7 +187,9 @@ class TestInjected(TestCase):
         self.assertFalse(hasattr(child, "y"))
 
         # Now test with @injected on child
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class InjectedChild(Base):
             y: str
 
@@ -194,7 +211,7 @@ class TestInjected(TestCase):
             service: CustomService
             version: str
 
-        App = injected(App, container=custom_container)
+        App = Injected(custom_container)(App)
 
         # Test automatic injection with custom container
         app = App(version="1.0")
@@ -205,7 +222,9 @@ class TestInjected(TestCase):
     def test_injected_preserves_annotations(self):
         """Test that generated __init__ has correct annotations and signature"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class AnnotatedClass:
             name: str
             value: int
@@ -230,12 +249,16 @@ class TestInjected(TestCase):
     def test_injected_preserves_annotations_inheritance(self):
         """Test that generated __init__ has correct annotations and signature"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class AnnotatedClassAncestor:
             name: int
             value: int
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class AnnotatedClass(AnnotatedClassAncestor):
             name: str
             enabled: bool
@@ -260,7 +283,9 @@ class TestInjected(TestCase):
         """Test @injected with optional fields (fields with defaults)"""
         from typing import Optional
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class ConfigClass:
             host: str
             port: int
@@ -287,7 +312,9 @@ class TestInjected(TestCase):
     def test_injected_with_various_defaults(self):
         """Test @injected with various types of default values"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class DefaultsClass:
             name: str
             count: int = 0
@@ -328,7 +355,9 @@ class TestInjected(TestCase):
     def test_injected_mixed_required_and_optional(self):
         """Test @injected with mix of required and optional fields"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class MixedClass:
             # Required fields
             id: int
@@ -367,17 +396,21 @@ class TestInjected(TestCase):
     def test_injected_dependency_injection_with_defaults(self):
         """Test @injected with dependency injection and default values"""
 
-        @injectable(container=self.container)
+        injectable = Injectable(self.container)
+
+        @injectable
         class Logger:
             def __init__(self):
                 self.level = "INFO"
 
-        @injectable(container=self.container)
+        @injectable
         class Database:
             def __init__(self):
                 self.connected = True
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             name: str
             logger: Logger  # Will be auto-injected
@@ -421,12 +454,16 @@ class TestInjected(TestCase):
     def test_injected_non_injectable_defaults(self):
         """Test that non-injectable fields with defaults work correctly"""
 
-        @injectable(container=self.container)
+        injectable = Injectable(self.container)
+
+        @injectable
         class Logger:
             def __init__(self):
                 self.name = "default-logger"
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Application:
             name: str
             logger: Logger  # Injectable, will be auto-injected
@@ -454,7 +491,9 @@ class TestInjected(TestCase):
     def test_injected_multiple_missing_arguments(self):
         """Test that all missing arguments are reported"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class MultiClass:
             a: int
             b: str
@@ -486,7 +525,9 @@ class TestInjected(TestCase):
     def test_injected_class_remains_unchanged(self):
         """Test that @injected doesn't modify the class in unexpected ways"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class TestClass:
             x: int
 
@@ -505,24 +546,31 @@ class TestInjected(TestCase):
         container1 = DependencyInjectionContainer()
         container2 = DependencyInjectionContainer()
 
-        @injectable(container=container1)
+        injectable1 = Injectable(container1)
+        injectable2 = Injectable(container2)
+
+        @injectable1
         class Service1:
             def __init__(self):
                 self.name = "Service from Container1"
 
-        @injectable(container=container2)
+        @injectable2
         class Service2:
             def __init__(self):
                 self.name = "Service from Container2"
 
         # Test class using container1
-        @injected(container=container1)
+        injected1 = Injected(container1)
+
+        @injected1
         class App1:
             service: Service1
             version: str
 
         # Test class using container2
-        @injected(container=container2)
+        injected2 = Injected(container2)
+
+        @injected2
         class App2:
             service: Service2
             version: str
@@ -549,18 +597,24 @@ class TestInjected(TestCase):
         container1 = DependencyInjectionContainer()
         container2 = DependencyInjectionContainer()
 
-        @injectable(container=container1)
+        injectable1 = Injectable(container1)
+
+        @injectable1
         class Database:
             def __init__(self):
                 self.name = "MainDB"
 
-        @injectable(container=container2)
+        injectable2 = Injectable(container2)
+
+        @injectable2
         class Logger:
             def __init__(self):
                 self.level = "DEBUG"
 
         # This should fail because App is using container1 but Logger is in container2
-        @injected(container=container1)
+        injected1 = Injected(container1)
+
+        @injected1
         class AppWithMissingDep:
             db: Database
             logger: Logger  # This is not in container1
@@ -585,31 +639,41 @@ class TestInjected(TestCase):
         custom_container = DependencyInjectionContainer()
 
         # Register in default container
-        @injectable(container=self.container)
+        injectable1 = Injectable(self.container)
+
+        @injectable1
         class DefaultService:
             def __init__(self):
                 self.source = "default"
 
         # Register in custom container
-        @injectable(container=custom_container)
+        injectable2 = Injectable(custom_container)
+
+        @injectable2
         class CustomService:
             def __init__(self):
                 self.source = "custom"
 
         # Also register DefaultService in custom container with different implementation
-        @injectable(container=custom_container, patch=DefaultService)
+        injectable3 = Injectable(custom_container, patch=DefaultService)
+
+        @injectable3
         class CustomDefaultService(DefaultService):
             def __init__(self):
                 self.source = "custom-override"
 
         # Class using default container
-        @injected(container=self.container)
+        injected1 = Injected(self.container)
+
+        @injected1
         class DefaultApp:
             service: DefaultService
             name: str
 
         # Class using custom container
-        @injected(container=custom_container)
+        injected2 = Injected(custom_container)
+
+        @injected2
         class CustomApp:
             service: (
                 DefaultService  # Should get CustomDefaultService due to patch
@@ -631,25 +695,31 @@ class TestInjected(TestCase):
         self.assertEqual(custom_app.name, "Custom")
 
         # Verify isolation - CustomService should not be in default container
-        self.assertFalse(CustomService in default_container)
+        self.assertFalse(CustomService in self.container)
         self.assertTrue(CustomService in custom_container)
 
     def test_injected_container_isolation_wrong_type(self):
         custom_container = DependencyInjectionContainer()
 
         # Register in default container
-        @injectable(container=self.container)
+        injectable1 = Injectable(self.container)
+
+        @injectable1
         class DefaultService:
             source: str
 
         # Also register DefaultService in custom container with different implementation
-        @injectable(container=custom_container, patch=DefaultService)
+        injectable2 = Injectable(custom_container, patch=DefaultService)
+
+        @injectable2
         class CustomDefaultService:
             def __init__(self):
                 self.source = "custom-override"
 
         # Class using custom container
-        @injected(container=custom_container)
+        injected = Injected(custom_container)
+
+        @injected
         class CustomApp:
             service: (
                 DefaultService  # Should get CustomDefaultService due to patch
@@ -667,19 +737,25 @@ class TestInjected(TestCase):
         custom_container = DependencyInjectionContainer()
 
         # Register in default container
-        @injectable(container=self.container)
+        injectable1 = Injectable(self.container)
+
+        @injectable1
         @runtime_checkable
         class DefaultService(Protocol):
             source: str
 
         # Also register DefaultService in custom container with different implementation
-        @injectable(container=custom_container, patch=DefaultService)
+        injectable2 = Injectable(custom_container, patch=DefaultService)
+
+        @injectable2
         class CustomDefaultService:
             def __init__(self):
                 self.source = "custom-override"
 
         # Class using custom container
-        @injected(container=custom_container)
+        injected = Injected(custom_container)
+
+        @injected
         class CustomApp:
             service: (
                 DefaultService  # Should get CustomDefaultService due to patch
@@ -692,20 +768,24 @@ class TestInjected(TestCase):
         """Test @injected with ConditionalResult for dynamic dependency injection"""
         container = DependencyInjectionContainer()
 
-        @injectable(container=container)
+        injectable = Injectable(container)
+
+        @injectable
         class Application:
             def __init__(self, role: str):
                 self.role = role
 
-        @injected(container=container)
+        injected = Injected(container)
+
+        @injected
         class AdminService:
             app: Application
 
-        @injected(container=container)
+        @injected
         class UserService:
             app: Application
 
-        @injected(container=container)
+        @injected
         class GuestService:
             app: Application
 
@@ -736,7 +816,9 @@ class TestInjected(TestCase):
         """Test @injected with __post_init__ method"""
         container = DependencyInjectionContainer()
 
-        @injected(container=container)
+        injected = Injected(container)
+
+        @injected
         class ServiceWithPostInit:
             def __init__(self, value: int = 10):
                 self.value = value
@@ -762,12 +844,16 @@ class TestInjected(TestCase):
     def test_injected_precedence_over_default(self):
         container = DependencyInjectionContainer()
 
-        @injectable(container=container)
+        injectable = Injectable(container)
+
+        @injectable
         class Application:
             def __init__(self, role: str):
                 self.role = role
 
-        @injected(container=container)
+        injected = Injected(container)
+
+        @injected
         class AdminService:
             app: Application = Application(role="default")
 

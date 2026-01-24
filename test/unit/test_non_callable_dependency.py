@@ -2,8 +2,8 @@ from unittest import TestCase
 
 from dependify import Dependency
 from dependify import DependencyInjectionContainer
-from dependify import inject
-from dependify import wired
+from dependify import Inject
+from dependify import Wired
 
 
 class TestNonCallableDependency(TestCase):
@@ -89,8 +89,10 @@ class TestNonCallableDependency(TestCase):
         api_key = "secret_api_key_123"
         container.register(str, api_key)
 
+        inject = Inject(container)
+
         class Service:
-            @inject(container=container)
+            @inject
             def __init__(self, key: str):
                 self.key = key
 
@@ -99,13 +101,15 @@ class TestNonCallableDependency(TestCase):
 
     def test_wired_with_non_callable_dependency(self):
         """
-        Test if @wired decorator works with non-callable dependencies.
+        Test if @Wired decorator works with non-callable dependencies.
         """
         container = DependencyInjectionContainer()
         database_url = "postgresql://localhost:5432/mydb"
         container.register(str, database_url)
 
-        @wired(container=container)
+        wired = Wired(container)
+
+        @wired
         class DatabaseService:
             db_url: str
 
@@ -140,8 +144,10 @@ class TestNonCallableDependency(TestCase):
         container.register(Port, port)
         container.register(Config, config)
 
+        inject = Inject(container)
+
         class Application:
-            @inject(container=container)
+            @inject
             def __init__(self, key: ApiKey, server_port: Port, cfg: Config):
                 self.key = key
                 self.server_port = server_port
@@ -170,8 +176,10 @@ class TestNonCallableDependency(TestCase):
         container.register(Logger)
         container.register(ApiKeyType, api_key)
 
+        inject = Inject(container)
+
         class Service:
-            @inject(container=container)
+            @inject
             def __init__(self, logger: Logger, key: ApiKeyType):
                 self.logger = logger
                 self.key = key

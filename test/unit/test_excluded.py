@@ -3,9 +3,9 @@ from unittest import TestCase
 
 from dependify import DependencyInjectionContainer
 from dependify import Excluded
-from dependify import injected
+from dependify import Injected
 from dependify import Lazy
-from dependify import wired
+from dependify import Wired
 from dependify.decorators import EvaluationStrategy
 
 
@@ -18,7 +18,9 @@ class TestExcluded(TestCase):
     def test_excluded_field_not_in_init(self):
         """Test that excluded fields are not included in __init__ parameters"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             name: str
             internal_state: Annotated[dict, Excluded]
@@ -33,7 +35,9 @@ class TestExcluded(TestCase):
     def test_excluded_field_can_be_set_manually(self):
         """Test that excluded fields can be set manually after construction"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             name: str
             internal_state: Annotated[dict, Excluded]
@@ -47,7 +51,9 @@ class TestExcluded(TestCase):
     def test_excluded_field_raises_type_error_if_provided(self):
         """Test that providing an excluded field in __init__ raises TypeError"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             name: str
             internal_state: Annotated[dict, Excluded]
@@ -61,7 +67,9 @@ class TestExcluded(TestCase):
     def test_excluded_multiple_fields(self):
         """Test excluding multiple fields"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             name: str
             _cache: Annotated[dict, Excluded]
@@ -83,8 +91,9 @@ class TestExcluded(TestCase):
 
         self.container.register(Logger)
 
+        injected = Injected(self.container)
+
         @injected(
-            container=self.container,
             evaluation_strategy=EvaluationStrategy.EAGER,
         )
         class Service:
@@ -106,8 +115,9 @@ class TestExcluded(TestCase):
 
         self.container.register(Database)
 
+        injected = Injected(self.container)
+
         @injected(
-            container=self.container,
             evaluation_strategy=EvaluationStrategy.LAZY,
         )
         class Service:
@@ -132,8 +142,9 @@ class TestExcluded(TestCase):
                 self.level = "INFO"
 
         # Don't register Logger to test optional behavior
+        injected = Injected(self.container)
+
         @injected(
-            container=self.container,
             evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY,
         )
         class Service:
@@ -163,7 +174,9 @@ class TestExcluded(TestCase):
         self.container.register(Database)
         self.container.register(Logger)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             db: Annotated[Database, Lazy]
             logger: Logger  # eager
@@ -193,7 +206,9 @@ class TestExcluded(TestCase):
 
         self.container.register(Logger)
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             logger: Logger
             name: str
@@ -207,7 +222,9 @@ class TestExcluded(TestCase):
     def test_excluded_with_defaults(self):
         """Test Excluded with class that has default values"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             name: str
             timeout: int = 30
@@ -228,7 +245,9 @@ class TestExcluded(TestCase):
     def test_excluded_with_post_init(self):
         """Test that __post_init__ can initialize excluded fields"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             name: str
             _cache: Annotated[dict, Excluded]
@@ -247,12 +266,16 @@ class TestExcluded(TestCase):
     def test_excluded_with_inheritance(self):
         """Test Excluded marker with class inheritance"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class BaseService:
             name: str
             _base_cache: Annotated[dict, Excluded]
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class ExtendedService(BaseService):
             version: str
             _extended_cache: Annotated[dict, Excluded]
@@ -266,7 +289,9 @@ class TestExcluded(TestCase):
     def test_excluded_all_fields(self):
         """Test when all fields except positional ones are excluded"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             name: str
             _field1: Annotated[dict, Excluded]
@@ -288,7 +313,9 @@ class TestExcluded(TestCase):
 
         self.container.register(Database)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             name: str
             port: int
@@ -304,7 +331,9 @@ class TestExcluded(TestCase):
     def test_excluded_signature_check(self):
         """Test that __init__ signature doesn't include excluded fields"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             name: str
             port: int
@@ -322,7 +351,9 @@ class TestExcluded(TestCase):
     def test_excluded_with_validation(self):
         """Test that validation still works for non-excluded fields"""
 
-        @injected(container=self.container, validate=True)
+        injected = Injected(self.container)
+
+        @injected(validate=True)
         class Service:
             name: str
             port: int
@@ -340,7 +371,9 @@ class TestExcluded(TestCase):
     def test_excluded_annotations_preserved(self):
         """Test that class annotations still include excluded fields"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             name: str
             _cache: Annotated[dict, Excluded]
@@ -352,7 +385,9 @@ class TestExcluded(TestCase):
     def test_excluded_field_initialization_pattern(self):
         """Test common pattern of initializing excluded fields with defaults"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             name: str
             _cache: Annotated[dict, Excluded]

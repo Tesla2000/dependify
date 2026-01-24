@@ -9,7 +9,7 @@ from dependify._dependency_injection_container import (
     DependencyInjectionContainer,
 )
 from dependify._is_class_var import is_class_var
-from dependify.decorators import inject
+from dependify.decorators import Inject
 
 from ._markers import Lazy
 from ._markers import OptionalLazy
@@ -98,5 +98,5 @@ def create_init(
             )
         )
     )
-    class_.__init__ = inject(__init__, container=container)
+    class_.__init__ = Inject(container)(__init__)
     return class_

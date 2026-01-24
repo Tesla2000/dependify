@@ -3,8 +3,8 @@ from typing import ClassVar
 from unittest import TestCase
 
 from dependify import DependencyInjectionContainer
-from dependify import injected
-from dependify import wired
+from dependify import Injected
+from dependify import Wired
 from dependify.decorators import EvaluationStrategy
 
 
@@ -17,7 +17,9 @@ class TestClassVar(TestCase):
     def test_class_var_in_init(self):
         """Test that ClassVar fields are not included in __init__ parameters"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             counter: ClassVar[int] = 0
             name: str
@@ -48,7 +50,9 @@ class TestClassVar(TestCase):
         # Register Logger in container
         self.container.register(Logger)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             default_logger: ClassVar[Logger] = None  # Should NOT be injected
             name: str
@@ -69,7 +73,9 @@ class TestClassVar(TestCase):
 
         self.container.register(Logger)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             shared_logger: ClassVar[Logger]  # Not injected
             instance_logger: Logger  # Should be injected
@@ -103,7 +109,9 @@ class TestClassVar(TestCase):
 
         self.container.register(Database)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             shared_db: ClassVar[Database]  # NOT injected
             instance_db: Database  # IS injected
@@ -124,7 +132,9 @@ class TestClassVar(TestCase):
     def test_class_var_raises_type_error_if_provided(self):
         """Test that providing a ClassVar field in __init__ raises TypeError"""
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             counter: ClassVar[int] = 0
             name: str
@@ -140,7 +150,9 @@ class TestClassVar(TestCase):
 
         self.container.register(Logger)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             shared_logger: ClassVar[Logger]
             name: str
@@ -163,7 +175,9 @@ class TestClassVar(TestCase):
         self.container.register(Logger)
         self.container.register(Database)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             default_logger: ClassVar[Logger]
             backup_db: ClassVar[Database]
@@ -194,8 +208,9 @@ class TestClassVar(TestCase):
 
         self.container.register(Logger)
 
+        injected = Injected(self.container)
+
         @injected(
-            container=self.container,
             evaluation_strategy=EvaluationStrategy.EAGER,
         )
         class Service:
@@ -221,8 +236,9 @@ class TestClassVar(TestCase):
 
         self.container.register(Database)
 
+        injected = Injected(self.container)
+
         @injected(
-            container=self.container,
             evaluation_strategy=EvaluationStrategy.LAZY,
         )
         class Service:
@@ -250,8 +266,9 @@ class TestClassVar(TestCase):
             def __init__(self):
                 self.level = "INFO"
 
+        injected = Injected(self.container)
+
         @injected(
-            container=self.container,
             evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY,
         )
         class Service:
@@ -272,8 +289,9 @@ class TestClassVar(TestCase):
     def test_class_var_with_optional_lazy_strategy_and_unregistered_type(self):
         """Test ClassVar is not injected even with OPTIONAL_LAZY strategy"""
 
+        injected = Injected(self.container)
+
         @injected(
-            container=self.container,
             evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY,
         )
         class Service:
@@ -294,7 +312,9 @@ class TestClassVar(TestCase):
 
         self.container.register(Logger)
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             audit_logger: ClassVar[Logger]  # Should NOT be injected
             logger: Logger  # Should be injected
@@ -319,12 +339,16 @@ class TestClassVar(TestCase):
 
         self.container.register(Logger)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class BaseService:
             base_logger: ClassVar[Logger]
             name: str
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class ExtendedService(BaseService):
             extended_logger: ClassVar[Logger]
             instance_logger: Logger  # Should be injected
@@ -353,7 +377,9 @@ class TestClassVar(TestCase):
 
         self.container.register(Database)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             shared_db: ClassVar[Database]  # Should NOT be in signature
             instance_db: Database  # Should be in signature (as injected)
@@ -377,7 +403,9 @@ class TestClassVar(TestCase):
 
         self.container.register(Logger)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             shared_logger: ClassVar[Logger]
             instance_logger: Logger
@@ -397,7 +425,9 @@ class TestClassVar(TestCase):
 
         self.container.register(Logger)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             # ClassVar with default instance - should NOT trigger injection
             null_logger: ClassVar[Logger] = Logger(level="NULL")
@@ -438,7 +468,9 @@ class TestClassVar(TestCase):
         self.container.register(Cache)
         self.container.register(Logger)
 
-        @injected(container=self.container)
+        injected = Injected(self.container)
+
+        @injected
         class Service:
             # Class-level shared resources
             global_cache: ClassVar[Cache]

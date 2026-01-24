@@ -7,7 +7,7 @@ from typing import Optional
 from typing import TypeVar
 
 from dependify import DependencyInjectionContainer
-from dependify import wired
+from dependify import Wired
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -18,15 +18,21 @@ class TestGeneric(unittest.TestCase):
         self.container = DependencyInjectionContainer()
 
     def test_wired_basic_functionality(self):
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Repo(Generic[T]):
             value: T
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class User:
             name: str = "Alice"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class MyService:
             repo: Repo[User]
 
@@ -38,7 +44,9 @@ class TestGeneric(unittest.TestCase):
     def test_generic_with_multiple_type_parameters(self):
         """Test generic class with multiple type parameters"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class KeyValueStore(Generic[T, U]):
             key: T
             value: U
@@ -47,7 +55,9 @@ class TestGeneric(unittest.TestCase):
             def __init__(self):
                 self.name = "Bob"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             store: KeyValueStore[str, User]
 
@@ -63,7 +73,9 @@ class TestGeneric(unittest.TestCase):
     def test_multiple_generic_instances_with_different_types(self):
         """Test multiple instances of the same generic with different type arguments"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Repo(Generic[T]):
             def __init__(self, entity_type: str):
                 self.entity_type = entity_type
@@ -74,7 +86,9 @@ class TestGeneric(unittest.TestCase):
         class Product:
             pass
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             user_repo: Repo[User]
             product_repo: Repo[Product]
@@ -91,7 +105,9 @@ class TestGeneric(unittest.TestCase):
     def test_generic_with_abstract_base_class(self):
         """Test generic combined with abstract base class"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class AbstractRepo(ABC, Generic[T]):
             @abstractmethod
             def get(self) -> T:
@@ -101,12 +117,16 @@ class TestGeneric(unittest.TestCase):
             def __init__(self):
                 self.name = "Charlie"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class UserRepo(AbstractRepo[User]):
             def get(self) -> User:
                 return User()
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             repo: AbstractRepo[User]
 
@@ -119,18 +139,24 @@ class TestGeneric(unittest.TestCase):
     def test_generic_inheritance(self):
         """Test inheritance with generic classes"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class BaseRepo(Generic[T]):
             base_value: str = "base"
 
         class User:
             pass
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class EnhancedRepo(BaseRepo[User]):
             enhanced_value: str = "enhanced"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             repo: EnhancedRepo
 
@@ -144,7 +170,9 @@ class TestGeneric(unittest.TestCase):
         """Test generic with caching enabled"""
         counter = 0
 
-        @wired(container=self.container, cached=True)
+        wired = Wired(self.container)
+
+        @wired(cached=True)
         class CachedRepo(Generic[T]):
             def __init__(self):
                 nonlocal counter
@@ -154,11 +182,15 @@ class TestGeneric(unittest.TestCase):
         class User:
             pass
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service1:
             repo: CachedRepo[User]
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service2:
             repo: CachedRepo[User]
 
@@ -175,7 +207,9 @@ class TestGeneric(unittest.TestCase):
         """Test generic without caching - each resolve creates new instance"""
         counter = 0
 
-        @wired(container=self.container, cached=False)
+        wired = Wired(self.container)
+
+        @wired(cached=False)
         class NonCachedRepo(Generic[T]):
             def __init__(self):
                 nonlocal counter
@@ -185,11 +219,15 @@ class TestGeneric(unittest.TestCase):
         class User:
             pass
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service1:
             repo: NonCachedRepo[User]
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service2:
             repo: NonCachedRepo[User]
 
@@ -205,7 +243,9 @@ class TestGeneric(unittest.TestCase):
     def test_nested_generic_types(self):
         """Test generics with nested type arguments like List[T]"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class CollectionRepo(Generic[T]):
             items: T
 
@@ -213,7 +253,9 @@ class TestGeneric(unittest.TestCase):
             def __init__(self, name: str):
                 self.name = name
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             repo: CollectionRepo[List[User]]
 
@@ -231,7 +273,9 @@ class TestGeneric(unittest.TestCase):
     def test_generic_with_optional_type(self):
         """Test generic with Optional type argument"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class MaybeRepo(Generic[T]):
             value: Optional[T] = None
 
@@ -239,7 +283,9 @@ class TestGeneric(unittest.TestCase):
             def __init__(self):
                 self.name = "Dave"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class ServiceWithValue:
             repo: MaybeRepo[User]
 
@@ -253,7 +299,9 @@ class TestGeneric(unittest.TestCase):
     def test_generic_with_existing_init(self):
         """Test generic class with custom __init__ method"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class CustomRepo(Generic[T]):
             prefix: str = "default"
             initialized: bool = True
@@ -261,7 +309,9 @@ class TestGeneric(unittest.TestCase):
         class User:
             pass
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             repo: CustomRepo[User]
 
@@ -275,18 +325,24 @@ class TestGeneric(unittest.TestCase):
     def test_generic_complex_hierarchy(self):
         """Test complex generic type hierarchies"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class BaseRepo(Generic[T]):
             level: str = "base"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service(Generic[T]):
             repo: BaseRepo[T]
 
         class User:
             pass
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Application:
             user_service: Service[User]
 
@@ -305,7 +361,9 @@ class TestGeneric(unittest.TestCase):
     def test_generic_type_preservation(self):
         """Test that generic type information is preserved correctly"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class TypedRepo(Generic[T]):
             item: T
 
@@ -316,7 +374,9 @@ class TestGeneric(unittest.TestCase):
             def __init__(self):
                 self.role = "admin"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             repo: TypedRepo[User]
 
@@ -331,22 +391,30 @@ class TestGeneric(unittest.TestCase):
     def test_generic_with_multiple_services(self):
         """Test multiple services using the same generic type"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Repo(Generic[T]):
             name: str
 
         class User:
             pass
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class ServiceA:
             repo: Repo[User]
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class ServiceB:
             repo: Repo[User]
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Application:
             service_a: ServiceA
             service_b: ServiceB
@@ -361,7 +429,9 @@ class TestGeneric(unittest.TestCase):
     def test_concrete_class_inherits_from_generic(self):
         """Test concrete class inheriting from Generic[T] with specific type"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class BaseRepo(Generic[T]):
             base_initialized: bool = True
 
@@ -372,14 +442,18 @@ class TestGeneric(unittest.TestCase):
             def __init__(self):
                 self.name = "John"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class UserRepo(BaseRepo[User]):
             user_repo_initialized: bool = True
 
             def get_type_name(self) -> str:
                 return "UserRepo"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             repo: UserRepo
 
@@ -393,22 +467,30 @@ class TestGeneric(unittest.TestCase):
     def test_multi_level_generic_inheritance(self):
         """Test multi-level inheritance hierarchy with generics"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Level1Repo(Generic[T]):
             level1: str = "L1"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Level2Repo(Level1Repo[T]):
             level2: str = "L2"
 
         class User:
             pass
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Level3Repo(Level2Repo[User]):
             level3: str = "L3"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             repo: Level3Repo
 
@@ -421,11 +503,15 @@ class TestGeneric(unittest.TestCase):
     def test_generic_inherits_from_generic_same_type_var(self):
         """Test generic class inheriting from another generic with same type variable"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class BaseRepo(Generic[T]):
             base_value: T
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class ExtendedRepo(BaseRepo[T], Generic[T]):
             extra: str
 
@@ -433,7 +519,9 @@ class TestGeneric(unittest.TestCase):
             def __init__(self):
                 self.name = "Alice"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             repo: ExtendedRepo[User]
 
@@ -450,11 +538,15 @@ class TestGeneric(unittest.TestCase):
     def test_generic_inherits_with_different_type_vars(self):
         """Test generic class inheriting from another generic with different type variables"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class BaseRepo(Generic[T]):
             item: T
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class KeyValueRepo(BaseRepo[T], Generic[T, U]):
             metadata: U
 
@@ -466,7 +558,9 @@ class TestGeneric(unittest.TestCase):
             def __init__(self):
                 self.created_at = "2024-01-01"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             repo: KeyValueRepo[User, Metadata]
 
@@ -487,11 +581,15 @@ class TestGeneric(unittest.TestCase):
             def __init__(self):
                 self.timestamp = "2024-01-01"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class BaseRepo(Generic[T]):
             repo_type: str = "base"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class TimestampedRepo(TimestampMixin, BaseRepo[T]):
             def __post_init__(self):
                 TimestampMixin.__init__(self)
@@ -501,11 +599,15 @@ class TestGeneric(unittest.TestCase):
         class User:
             pass
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class ConcreteRepo(TimestampedRepo[User]):
             concrete: bool = True
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             repo: ConcreteRepo
 
@@ -519,7 +621,9 @@ class TestGeneric(unittest.TestCase):
     def test_inheritance_with_method_overriding(self):
         """Test method overriding in generic inheritance"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class BaseRepo(Generic[T]):
             def save(self, item: T) -> str:
                 return "base_save"
@@ -531,7 +635,9 @@ class TestGeneric(unittest.TestCase):
             def __init__(self):
                 self.name = "Charlie"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class UserRepo(BaseRepo[User]):
             def save(self, item: User) -> str:
                 return f"user_save_{item.name}"
@@ -539,7 +645,9 @@ class TestGeneric(unittest.TestCase):
             def get_name(self) -> str:
                 return "UserRepo"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             repo: UserRepo
 
@@ -551,11 +659,15 @@ class TestGeneric(unittest.TestCase):
     def test_inheritance_with_additional_type_parameters(self):
         """Test child class adding additional type parameters"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class BaseRepo(Generic[T]):
             item: T
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class ExtendedRepo(BaseRepo[T], Generic[T, U]):
             config: U
 
@@ -567,7 +679,9 @@ class TestGeneric(unittest.TestCase):
             def __init__(self):
                 self.setting = "production"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             repo: ExtendedRepo[User, Config]
 
@@ -583,7 +697,9 @@ class TestGeneric(unittest.TestCase):
     def test_generic_inheritance_with_partial_specialization(self):
         """Test partial type specialization in generic inheritance"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class BaseRepo(Generic[T, U]):
             first: T
             second: U
@@ -592,11 +708,15 @@ class TestGeneric(unittest.TestCase):
             def __init__(self):
                 self.name = "Eve"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class UserStringRepo(BaseRepo[User, str]):
             specialized: bool = True
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             repo: UserStringRepo
 
@@ -613,7 +733,9 @@ class TestGeneric(unittest.TestCase):
     def test_abstract_generic_with_concrete_implementation(self):
         """Test abstract generic base with concrete implementation"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class AbstractRepository(ABC, Generic[T]):
             @abstractmethod
             def save(self, item: T) -> bool:
@@ -628,7 +750,9 @@ class TestGeneric(unittest.TestCase):
                 self.user_id = user_id
                 self.name = name
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class InMemoryUserRepository(AbstractRepository[User]):
             def __init__(self):
                 self.storage = {}
@@ -640,7 +764,9 @@ class TestGeneric(unittest.TestCase):
             def find(self, id: int) -> Optional[User]:
                 return self.storage.get(id)
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             repo: AbstractRepository[User]
 
@@ -661,7 +787,9 @@ class TestGeneric(unittest.TestCase):
     def test_chained_inheritance_different_types(self):
         """Test chained inheritance where each level uses different types"""
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Level1(Generic[T]):
             level1_value: T
 
@@ -669,15 +797,21 @@ class TestGeneric(unittest.TestCase):
             def __init__(self):
                 self.name = "Grace"
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Level2(Level1[User], Generic[U]):
             level2_value: U
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Level3(Level2[str]):
             level3: bool = True
 
-        @wired(container=self.container)
+        wired = Wired(self.container)
+
+        @wired
         class Service:
             repo: Level3
 

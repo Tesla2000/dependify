@@ -1,44 +1,45 @@
 from unittest import TestCase
 
 from dependify import DependencyInjectionContainer
-from dependify import has
-from dependify import injectable
-from dependify import resolve
+from dependify import Injectable
 
 
 class TestInjectable(TestCase):
 
     def test_injectable_with_custom_container(self):
-        """Test @injectable with a custom container"""
+        """Test @Injectable with a custom container"""
         container = DependencyInjectionContainer()
 
-        @injectable(container=container)
+        injectable = Injectable(container)
+
+        @injectable
         class A:
             pass
 
         # Should be registered in custom container
         self.assertTrue(A in container)
-        # Should not be in default container
-        self.assertFalse(has(A))
         # Should resolve correctly
         instance = container.resolve(A)
         self.assertIsInstance(instance, A)
 
     def test_injectable_with_default_container(self):
-        """Test @injectable using default container"""
+        """Test @Injectable using custom container"""
+        container = DependencyInjectionContainer()
+
+        injectable = Injectable(container)
 
         @injectable
         class B:
             pass
 
-        # Should be registered in default container
-        self.assertTrue(has(B))
+        # Should be registered in container
+        self.assertTrue(B in container)
         # Should resolve correctly
-        instance = resolve(B)
+        instance = container.resolve(B)
         self.assertIsInstance(instance, B)
 
     def test_injectable_with_patch_parameter(self):
-        """Test @injectable with patch parameter to replace existing class"""
+        """Test @Injectable with patch parameter to replace existing class"""
         container = DependencyInjectionContainer()
 
         class Original:
@@ -48,7 +49,9 @@ class TestInjectable(TestCase):
         # Register original
         container.register(Original)
 
-        @injectable(patch=Original, container=container)
+        injectable = Injectable(container, patch=Original)
+
+        @injectable
         class Patched:
             def method(self):
                 return "patched"
@@ -59,10 +62,12 @@ class TestInjectable(TestCase):
         self.assertEqual(instance.method(), "patched")
 
     def test_injectable_with_cached_true(self):
-        """Test @injectable with cached=True (singleton behavior)"""
+        """Test @Injectable with cached=True (singleton behavior)"""
         container = DependencyInjectionContainer()
 
-        @injectable(cached=True, container=container)
+        injectable = Injectable(container, cached=True)
+
+        @injectable
         class CachedService:
             pass
 
@@ -72,10 +77,12 @@ class TestInjectable(TestCase):
         self.assertIs(instance1, instance2)
 
     def test_injectable_with_cached_false(self):
-        """Test @injectable with cached=False (new instance each time)"""
+        """Test @Injectable with cached=False (new instance each time)"""
         container = DependencyInjectionContainer()
 
-        @injectable(cached=False, container=container)
+        injectable = Injectable(container, cached=False)
+
+        @injectable
         class NonCachedService:
             pass
 
@@ -85,14 +92,18 @@ class TestInjectable(TestCase):
         self.assertIsNot(instance1, instance2)
 
     def test_injectable_with_autowire_false(self):
-        """Test @injectable with autowire=False"""
+        """Test @Injectable with autowire=False"""
         container = DependencyInjectionContainer()
 
-        @injectable(container=container)
+        injectable1 = Injectable(container)
+
+        @injectable1
         class Dependency:
             pass
 
-        @injectable(autowire=False, container=container)
+        injectable2 = Injectable(container, autowire=False)
+
+        @injectable2
         class ServiceNoAutowire:
             def __init__(self, dep: Dependency):
                 self.dep = dep
@@ -102,14 +113,18 @@ class TestInjectable(TestCase):
             container.resolve(ServiceNoAutowire)
 
     def test_injectable_with_autowire_true(self):
-        """Test @injectable with autowire=True (default)"""
+        """Test @Injectable with autowire=True (default)"""
         container = DependencyInjectionContainer()
 
-        @injectable(container=container)
+        injectable1 = Injectable(container)
+
+        @injectable1
         class Dependency:
             pass
 
-        @injectable(autowire=True, container=container)
+        injectable2 = Injectable(container, autowire=True)
+
+        @injectable2
         class ServiceWithAutowire:
             def __init__(self, dep: Dependency):
                 self.dep = dep
@@ -120,19 +135,21 @@ class TestInjectable(TestCase):
         self.assertIsInstance(instance.dep, Dependency)
 
     def test_injectable_multiple_decorations(self):
-        """Test multiple @injectable decorations on different classes"""
+        """Test multiple @Injectable decorations on different classes"""
         container = DependencyInjectionContainer()
 
-        @injectable(container=container)
+        injectable = Injectable(container)
+
+        @injectable
         class ServiceA:
             pass
 
-        @injectable(container=container)
+        @injectable
         class ServiceB:
             def __init__(self, a: ServiceA):
                 self.a = a
 
-        @injectable(container=container)
+        @injectable
         class ServiceC:
             def __init__(self, a: ServiceA, b: ServiceB):
                 self.a = a
@@ -150,14 +167,16 @@ class TestInjectable(TestCase):
         self.assertIsInstance(c_instance.b.a, ServiceA)
 
     def test_injectable_with_factory_function(self):
-        """Test @injectable on a factory function instead of class"""
+        """Test @Injectable on a factory function instead of class"""
         container = DependencyInjectionContainer()
 
         class ServiceFromFactory:
             def __init__(self, value):
                 self.value = value
 
-        @injectable(container=container)
+        injectable = Injectable(container)
+
+        @injectable
         def service_factory():
             return ServiceFromFactory(42)
 
@@ -170,15 +189,17 @@ class TestInjectable(TestCase):
         self.assertEqual(instance.value, 42)
 
     def test_injectable_inheritance(self):
-        """Test @injectable with class inheritance"""
+        """Test @Injectable with class inheritance"""
         container = DependencyInjectionContainer()
 
-        @injectable(container=container)
+        injectable = Injectable(container)
+
+        @injectable
         class BaseService:
             def get_name(self):
                 return "base"
 
-        @injectable(container=container)
+        @injectable
         class DerivedService(BaseService):
             def get_name(self):
                 return "derived"
@@ -192,15 +213,17 @@ class TestInjectable(TestCase):
         self.assertIsInstance(derived_instance, BaseService)
 
     def test_injectable_with_all_parameters(self):
-        """Test @injectable with all parameters specified"""
+        """Test @Injectable with all parameters specified"""
         container = DependencyInjectionContainer()
 
         class Interface:
             pass
 
-        @injectable(
-            patch=Interface, cached=True, autowire=True, container=container
+        injectable = Injectable(
+            container, patch=Interface, cached=True, autowire=True
         )
+
+        @injectable
         class Implementation(Interface):
             pass
 

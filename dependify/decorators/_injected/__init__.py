@@ -1,5 +1,5 @@
 __all__ = [
-    "injected",
+    "Injected",
     "EvaluationStrategy",
     "Lazy",
     "OptionalLazy",
@@ -7,6 +7,6 @@ __all__ = [
     "Excluded",
 ]
 
-from ._injected import injected
+from ._injected import Injected
 from ._evaluation_strategy import EvaluationStrategy
 from ._markers import Lazy, OptionalLazy, Eager, Excluded
