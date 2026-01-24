@@ -29,10 +29,6 @@ class Injectable:
     def __call__(
         self,
         _func: ClassType,
-        *,
-        patch: Optional[Type] = None,
-        cached: Optional[bool] = None,
-        autowire: Optional[bool] = None,
     ) -> ClassType: ...
 
     @overload

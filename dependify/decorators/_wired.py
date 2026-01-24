@@ -42,24 +42,18 @@ class Wired:
     def __call__(
         self,
         _func: ClassType,
-        *,
-        patch: Optional[Type] = None,
-        cached: bool = False,
-        autowire: bool = True,
-        validate: bool = True,
-        evaluation_strategy: EvaluationStrategy = EvaluationStrategy.EAGER,
     ) -> ClassType: ...
 
     @overload
     def __call__(
         self,
-        _func: None,
+        _func: None = None,
         *,
         patch: Optional[Type] = None,
-        cached: bool = False,
-        autowire: bool = True,
-        validate: bool = True,
-        evaluation_strategy: EvaluationStrategy = EvaluationStrategy.EAGER,
+        cached: Optional[bool] = None,
+        autowire: Optional[bool] = None,
+        validate: Optional[bool] = None,
+        evaluation_strategy: Optional[EvaluationStrategy] = None,
     ) -> Self: ...
 
     def __call__(

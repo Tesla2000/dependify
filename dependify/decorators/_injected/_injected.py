@@ -35,9 +35,6 @@ class Injected:
     def __call__(
         self,
         _func: ClassType,
-        *,
-        validate: Optional[bool] = None,
-        evaluation_strategy: Optional[EvaluationStrategy] = None,
     ) -> ClassType: ...
 
     @overload
