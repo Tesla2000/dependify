@@ -14,6 +14,7 @@ from pydantic import model_validator
 from pydantic import ModelWrapValidatorHandler
 from typing_extensions import Self
 
+from ._markers import Excluded
 from ._protocol_translator import (
     translate_protocol,
 )
@@ -75,6 +76,11 @@ def create_pydantic_wrap_validator(
             setattr(validated_object, field_name, resolution_result)
         return validated_object
 
+    validated_fields = tuple(
+        field_name
+        for field_name, field_info in class_.model_fields.items()
+        if Excluded not in (field_info.metadata or ())
+    )
     injectable_class = type(
         class_.__name__,
         (class_,),
@@ -82,8 +88,17 @@ def create_pydantic_wrap_validator(
             _inject_fields.__name__: model_validator(mode="wrap")(
                 classmethod(_inject_fields)
             ),
-            _resolve_conditional.__name__: field_validator("*", mode="before")(
-                classmethod(_resolve_conditional)
+            _resolve_conditional.__name__: (
+                field_validator(
+                    *tuple(
+                        field_name
+                        for field_name, field_info in class_.model_fields.items()
+                        if Excluded not in (field_info.metadata or ())
+                    ),
+                    mode="before",
+                )(classmethod(_resolve_conditional))
+                if validated_fields
+                else classmethod(_resolve_conditional)
             ),
         },
     )

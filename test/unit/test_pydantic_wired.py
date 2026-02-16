@@ -2,7 +2,9 @@ import unittest
 from random import random
 from typing import Annotated
 from typing import ClassVar
+from typing import Literal
 from typing import Optional
+from typing import Union
 
 from dependify import ConditionalResult
 from dependify import DependencyInjectionContainer
@@ -12,6 +14,7 @@ from dependify.decorators import Excluded
 from dependify.decorators import Lazy
 from dependify.decorators import OptionalLazy
 from pydantic import BaseModel
+from pydantic import Discriminator
 from pydantic import Field
 from pydantic import field_validator
 from pydantic import model_validator
@@ -693,6 +696,86 @@ class TestPydanticWired(unittest.TestCase):
 
         with self.assertRaises(ValidationError):
             GuestService()
+
+    def test_pydantic_excluded_with_discriminator(self):
+        """Test that Excluded fields work with discriminated unions.
+
+        Discriminator fields cannot have before validators, but Excluded fields
+        should work fine since they are excluded from validation.
+        """
+
+        @self.wired
+        class Logger(BaseModel):
+            def log(self, msg):
+                return f"LOG: {msg}"
+
+        # Define discriminated union types
+        @self.wired
+        class EmailNotification(BaseModel):
+            type: Annotated[Literal["email"], Excluded] = "email"
+            email: str
+            subject: str
+
+        @self.wired
+        class SmsNotification(BaseModel):
+            type: Annotated[Literal["sms"], Excluded] = "sms"
+            phone: str
+            message: str
+
+        # Service that uses discriminated union and has Excluded fields
+        @self.wired
+        class NotificationService(BaseModel):
+            logger: Logger
+            notification: Annotated[
+                Union[EmailNotification, SmsNotification],
+                Discriminator("type"),
+            ]
+            name: str
+            # Excluded field - should not interfere with discriminator
+            _internal_cache: Annotated[dict, Excluded] = {}
+
+            def model_post_init(self, __context) -> None:
+                self._internal_cache = {
+                    "initialized": True,
+                    "type": self.notification.type,
+                }
+
+        # Test with email notification
+        email_service = NotificationService(
+            name="EmailService",
+            notification={
+                "type": "email",
+                "email": "user@example.com",
+                "subject": "Test",
+            },
+        )
+
+        self.assertIsInstance(email_service.logger, Logger)
+        self.assertIsInstance(email_service.notification, EmailNotification)
+        self.assertEqual(email_service.notification.type, "email")
+        self.assertEqual(email_service.notification.email, "user@example.com")
+        self.assertEqual(
+            email_service._internal_cache,
+            {"initialized": True, "type": "email"},
+        )
+
+        # Test with SMS notification
+        sms_service = NotificationService(
+            name="SmsService",
+            notification={
+                "type": "sms",
+                "phone": "+1234567890",
+                "message": "Hello",
+            },
+        )
+
+        self.assertIsInstance(sms_service.logger, Logger)
+        self.assertIsInstance(sms_service.notification, SmsNotification)
+        self.assertEqual(sms_service.notification.type, "sms")
+        self.assertEqual(sms_service.notification.phone, "+1234567890")
+        self.assertEqual(
+            sms_service._internal_cache, {"initialized": True, "type": "sms"}
+        )
 
 
 if __name__ == "__main__":
