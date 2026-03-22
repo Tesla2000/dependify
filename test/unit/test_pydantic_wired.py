@@ -1,4 +1,5 @@
 import unittest
+from abc import ABC
 from random import random
 from typing import Annotated
 from typing import ClassVar
@@ -783,6 +784,13 @@ class TestPydanticWired(unittest.TestCase):
             """Docstring"""
 
         assert Application.__doc__
+
+    def test_abc_persists(self):
+        @self.wired
+        class Application(BaseModel, ABC):
+            """Docstring"""
+
+        assert ABC in Application.__bases__
 
 
 if __name__ == "__main__":
