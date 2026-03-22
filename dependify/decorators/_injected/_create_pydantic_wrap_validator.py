@@ -37,6 +37,19 @@ def create_pydantic_wrap_validator(
             return value.resolve(cls)
         return value
 
+    def __eq__(self, other: Any) -> bool:
+        if "__eq__" in class_.__dict__:
+            return class_.__eq__(self, other)
+        if not isinstance(other, class_):
+            return False
+        return (
+            self.__dict__ == other.__dict__
+            and getattr(self, "__pydantic_extra__", None)
+            == getattr(other, "__pydantic_extra__", None)
+            and getattr(self, "__pydantic_private__", None)
+            == getattr(other, "__pydantic_private__", None)
+        )
+
     def _inject_fields(
         cls: Type[BaseModel],
         data: Any,
@@ -86,9 +99,14 @@ def create_pydantic_wrap_validator(
 
     class _InjectableMeta(_base_meta):
         def __instancecheck__(cls, instance):
-            return _base_meta.__instancecheck__(
-                class_, instance
-            ) or _base_meta.__instancecheck__(cls, instance)
+            return type(instance) is class_ or _base_meta.__instancecheck__(
+                cls, instance
+            )
+
+        def __subclasscheck__(cls, subclass):
+            return subclass is class_ or _base_meta.__subclasscheck__(
+                cls, subclass
+            )
 
     injectable_class = _InjectableMeta(
         class_.__name__,
@@ -117,6 +135,8 @@ def create_pydantic_wrap_validator(
                 else classmethod(_resolve_conditional)
             ),
             "__doc__": class_.__doc__,
+            __eq__.__name__: __eq__,
         },
     )
+
     return injectable_class

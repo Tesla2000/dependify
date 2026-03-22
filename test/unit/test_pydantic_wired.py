@@ -800,6 +800,88 @@ class TestPydanticWired(unittest.TestCase):
 
         assert wired_application.__instancecheck__(Application())
         assert isinstance(Application(), wired_application)
+        assert issubclass(Application, wired_application)
+        assert isinstance(wired_application(), Application)
+        assert issubclass(wired_application, Application)
+
+    def test_wired_subclass_of_wired_base(self):
+        @self.wired
+        class Base(BaseModel):
+            pass
+
+        @self.wired
+        class Subclass(Base):
+            pass
+
+    def test_instance_check_contained(self):
+        @self.wired
+        class Base(BaseModel):
+            pass
+
+        @self.wired
+        class Subclass1(Base):
+            pass
+
+        @self.wired
+        class Subclass2(Base):
+            pass
+
+        assert not isinstance(Subclass1(), Subclass2)
+        assert not issubclass(Subclass1, Subclass2)
+
+    def test_instance_equality(self):
+        class Application(BaseModel):
+            name: str = "app"
+
+        wired_application = self.wired(Application)
+
+        assert Application(name="app") == wired_application(name="app")
+        assert wired_application(name="app") == Application(name="app")
+
+    def test_instance_equality_custom_eq(self):
+        class Application(BaseModel):
+            name: str = "app"
+
+            def __eq__(self, other: object) -> bool:
+                return (
+                    isinstance(other, Application) and self.name == other.name
+                )
+
+        wired_application = self.wired(Application)
+
+        assert Application(name="app") == wired_application(name="app")
+        assert wired_application(name="app") == Application(name="app")
+        assert not (Application(name="foo") == wired_application(name="bar"))
+
+        class Application(BaseModel):
+            name: str = "app"
+
+            def __eq__(self, other: object) -> bool:
+                return True
+
+        wired_application = self.wired(Application)
+
+        assert Application(name="app") == wired_application(name="app")
+        assert wired_application(name="app") == Application(name="app")
+        assert Application(name="foo") == wired_application(name="bar")
+        assert object() == Application(name="bar")
+        assert object() == wired_application(name="bar")
+
+    def test_instance_equality_contained(self):
+        @self.wired
+        class Base(BaseModel):
+            pass
+
+        @self.wired
+        class Subclass1(Base):
+            pass
+
+        @self.wired
+        class Subclass2(Base):
+            pass
+
+        assert not (Subclass1() == Subclass2())
+        assert not (Subclass2() == Subclass1())
 
 
 if __name__ == "__main__":
