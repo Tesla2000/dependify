@@ -1,3 +1,4 @@
+from abc import ABC
 from typing import Any
 from typing import Dict
 from typing import Type
@@ -83,7 +84,14 @@ def create_pydantic_wrap_validator(
     )
     injectable_class = type(
         class_.__name__,
-        (class_,),
+        (
+            (
+                class_,
+                ABC,
+            )
+            if ABC in class_.__bases__
+            else (class_,)
+        ),
         {
             _inject_fields.__name__: model_validator(mode="wrap")(
                 classmethod(_inject_fields)
