@@ -777,6 +777,13 @@ class TestPydanticWired(unittest.TestCase):
             sms_service._internal_cache, {"initialized": True, "type": "sms"}
         )
 
+    def test_docstring_persists(self):
+        @self.wired
+        class Application(BaseModel):
+            """Docstring"""
+
+        assert Application.__doc__
+
 
 if __name__ == "__main__":
     unittest.main()

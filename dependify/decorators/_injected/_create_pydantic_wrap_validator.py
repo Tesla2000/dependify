@@ -100,6 +100,7 @@ def create_pydantic_wrap_validator(
                 if validated_fields
                 else classmethod(_resolve_conditional)
             ),
+            "__doc__": class_.__doc__,
         },
     )
     injectable_class.__class__ = class_.__class__
