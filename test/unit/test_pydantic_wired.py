@@ -792,6 +792,15 @@ class TestPydanticWired(unittest.TestCase):
 
         assert ABC in Application.__bases__
 
+    def test_is_instance_check(self):
+        class Application(BaseModel):
+            pass
+
+        wired_application = self.wired(Application)
+
+        assert wired_application.__instancecheck__(Application())
+        assert isinstance(Application(), wired_application)
+
 
 if __name__ == "__main__":
     unittest.main()

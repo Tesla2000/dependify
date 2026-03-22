@@ -82,7 +82,15 @@ def create_pydantic_wrap_validator(
         for field_name, field_info in class_.model_fields.items()
         if Excluded not in (field_info.metadata or ())
     )
-    injectable_class = type(
+    _base_meta = type(class_)
+
+    class _InjectableMeta(_base_meta):
+        def __instancecheck__(cls, instance):
+            return _base_meta.__instancecheck__(
+                class_, instance
+            ) or _base_meta.__instancecheck__(cls, instance)
+
+    injectable_class = _InjectableMeta(
         class_.__name__,
         (
             (
@@ -111,5 +119,4 @@ def create_pydantic_wrap_validator(
             "__doc__": class_.__doc__,
         },
     )
-    injectable_class.__class__ = class_.__class__
     return injectable_class
