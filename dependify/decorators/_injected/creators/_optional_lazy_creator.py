@@ -9,6 +9,9 @@ from dependify._is_class_var import is_class_var
 from dependify.decorators._injected._get_class_annotations import (
     get_class_annotations,
 )
+from dependify.decorators._injected._is_injectable_field_type import (
+    is_injectable_field_type,
+)
 from dependify.decorators._injected._markers import Markers
 from dependify.decorators._injected._markers import OptionalLazy
 
@@ -22,13 +25,17 @@ class OptionalLazyCreator(EagerCreator[ClassType]):
     def _get_class_annotations(class_: ClassType) -> Dict[str, Any]:
         annotations = get_class_annotations(class_).copy()
         for field_name, field_annotation in annotations.items():
-            if any(
-                map(
-                    Markers.__contains__,
-                    int(Annotated is get_origin(field_annotation))
-                    * get_args(field_annotation),
+            if (
+                any(
+                    map(
+                        Markers.__contains__,
+                        int(Annotated is get_origin(field_annotation))
+                        * get_args(field_annotation),
+                    )
                 )
-            ) or is_class_var(field_annotation):
+                or is_class_var(field_annotation)
+                or not is_injectable_field_type(field_annotation)
+            ):
                 continue
             annotations[field_name] = Annotated[field_annotation, OptionalLazy]
         return annotations

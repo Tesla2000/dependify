@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Builtin-type exclusion from injection decorators
+
+- **`is_injectable_field_type` helper** (`dependify/decorators/_injected/_is_injectable_field_type.py`):
+  Shared predicate used by all injection paths to decide whether a field
+  annotation warrants DI treatment.  Returns `True` only for custom types —
+  it skips:
+
+  | Annotation kind | Example | Injected? |
+  |---|---|---|
+  | Builtin primitive | `int`, `str`, `bool`, `float` | No |
+  | Generic collection / special form | `list[str]`, `dict[str, int]`, `Literal["x"]` | No |
+  | `Optional` / `Union` of only builtins | `Optional[str]` | No |
+  | Custom class | `class Service` | Yes |
+  | Subclass of builtin | `class MyStr(str)` | Yes |
+  | `Optional[CustomType]` | `Optional[Service]` | Yes |
+  | `Union` containing a custom type | `Union[Dog, Cat]` | Yes |
+  | `Annotated[CustomType, ...]` | `Annotated[Service, Lazy]` | Yes |
+
+- **Pydantic `field_validator` guard** (`_create_pydantic_wrap_validator.py`):
+  The `_resolve_conditional` `field_validator` is now registered only for
+  fields whose type passes `is_injectable_field_type`.  This fixes a crash
+  when a pydantic model has `Literal`-typed discriminator fields that are
+  **not** marked `Excluded` — pydantic forbids `before` validators on
+  discriminator fields.
+
+- **Lazy/OptionalLazy creator guard** (`_lazy_creator.py`,
+  `_optional_lazy_creator.py`): Fields with builtin or generic types are no
+  longer wrapped with `Annotated[T, Lazy]` / `Annotated[T, OptionalLazy]`.
+  Previously a class decorated with `EvaluationStrategy.LAZY` that had a
+  `name: str` field would create a lazy property for `str`, causing a
+  resolution error at access time.
+
+
+
 #### Multiple Dependency Resolution (resolve_all)
 
 - **`resolve_all` Method**: Added ability to resolve all dependencies registered for a type:
