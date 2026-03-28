@@ -883,6 +883,181 @@ class TestPydanticWired(unittest.TestCase):
         assert not (Subclass1() == Subclass2())
         assert not (Subclass2() == Subclass1())
 
+    def test_union_annotation_with_registered_value(self):
+        class Dog(BaseModel):
+            sound: str = "woof"
+
+        class Cat(BaseModel):
+            sound: str = "meow"
+
+        self.container.register(Union[Dog, Cat], Cat())
+
+        @self.wired
+        class Service(BaseModel):
+            pet: Union[Dog, Cat] = Field(default_factory=Dog)
+
+        service = Service()
+        self.assertIsInstance(service.pet, Cat)
+        self.assertEqual(service.pet.sound, "meow")
+
+    def test_literal_discriminator_without_excluded(self):
+        """Literal-typed discriminator fields work without needing Excluded."""
+
+        @self.wired
+        class EmailNotification(BaseModel):
+            type: Literal["email"] = "email"
+            address: str
+
+        @self.wired
+        class SmsNotification(BaseModel):
+            type: Literal["sms"] = "sms"
+            phone: str
+
+        @self.wired
+        class Service(BaseModel):
+            notification: Annotated[
+                Union[EmailNotification, SmsNotification],
+                Discriminator("type"),
+            ]
+
+        svc = Service(
+            notification={"type": "email", "address": "a@example.com"}
+        )
+        self.assertIsInstance(svc.notification, EmailNotification)
+        self.assertEqual(svc.notification.address, "a@example.com")
+
+    def test_builtin_typed_fields_not_wrapped(self):
+        """Fields typed as builtins (int, str, bool, float) work without interference."""
+
+        @self.wired
+        class Service(BaseModel):
+            name: str
+            port: int = 8080
+            debug: bool = False
+            ratio: float = 1.0
+
+        svc = Service(name="TestService")
+        self.assertEqual(svc.name, "TestService")
+        self.assertEqual(svc.port, 8080)
+        self.assertFalse(svc.debug)
+        self.assertEqual(svc.ratio, 1.0)
+
+    def test_generic_typed_fields_not_wrapped(self):
+        """Generic fields (list[], dict[], Optional[]) work without interference."""
+
+        @self.wired
+        class Service(BaseModel):
+            tags: list[str] = []
+            meta: dict[str, int] = {}
+            alias: Optional[str] = None
+
+        svc = Service(tags=["a", "b"], meta={"x": 1})
+        self.assertEqual(svc.tags, ["a", "b"])
+        self.assertEqual(svc.meta, {"x": 1})
+        self.assertIsNone(svc.alias)
+
+    def test_builtin_subclass_injection(self):
+        """Subclasses of builtins (e.g. class Integer(int)) can be injected."""
+
+        class Integer(int):
+            pass
+
+        self.container.register(Integer, lambda: Integer(42))
+
+        @self.wired
+        class Service(BaseModel):
+            model_config = {"arbitrary_types_allowed": True}
+
+            value: Integer
+
+        svc = Service()
+        self.assertIsInstance(svc.value, Integer)
+        self.assertEqual(svc.value, 42)
+
+    def test_optional_custom_type_default_none(self):
+        """Optional[CustomType] fields default to None when the type isn't registered."""
+
+        class Analytics(BaseModel):
+            pass
+
+        @self.wired
+        class Service(BaseModel):
+            analytics: Optional[Analytics] = None
+            name: str
+
+        svc = Service(name="TestService")
+        self.assertIsNone(svc.analytics)
+        self.assertEqual(svc.name, "TestService")
+
+    def test_optional_custom_type_explicit_registration(self):
+        """Optional[CustomType] fields are injected when Optional[X] is registered."""
+
+        @self.wired
+        class Logger(BaseModel):
+            level: str = "INFO"
+
+        self.container.register(
+            Optional[Logger], lambda: Logger(level="DEBUG")
+        )
+
+        @self.wired
+        class Service(BaseModel):
+            logger: Optional[Logger] = None
+            name: str
+
+        svc = Service(name="TestService")
+        self.assertIsInstance(svc.logger, Logger)
+        self.assertEqual(svc.logger.level, "DEBUG")
+
+    def test_optional_custom_type_conditional_result(self):
+        """Optional[CustomType] fields resolve ConditionalResult when Optional[X] is registered."""
+
+        @self.wired
+        class Application(BaseModel):
+            role: str
+
+        @self.wired
+        class AdminService(BaseModel):
+            app: Optional[Application] = None
+
+        self.container.register(
+            Optional[Application],
+            lambda: ConditionalResult(
+                Application(role="default"),
+                (
+                    (
+                        lambda class_: issubclass(class_, AdminService),
+                        Application(role="admin"),
+                    ),
+                ),
+            ),
+        )
+
+        admin_service = AdminService()
+        self.assertIsNotNone(admin_service.app)
+        self.assertEqual(admin_service.app.role, "admin")
+
+    def test_classvar_custom_type_not_injected_per_instance(self):
+        """ClassVar[CustomType] is a class-level attribute, not per-instance injection."""
+
+        @self.wired
+        class Logger(BaseModel):
+            level: str = "INFO"
+
+        @self.wired
+        class Service(BaseModel):
+            shared: ClassVar[Optional[Logger]] = None
+            name: str
+
+        Service.shared = Logger(level="DEBUG")
+
+        svc1 = Service(name="s1")
+        svc2 = Service(name="s2")
+
+        # ClassVar is shared across instances and not overwritten by injection
+        self.assertIs(svc1.__class__.shared, svc2.__class__.shared)
+        self.assertEqual(Service.shared.level, "DEBUG")
+
 
 if __name__ == "__main__":
     unittest.main()
