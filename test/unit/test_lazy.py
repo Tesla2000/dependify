@@ -527,6 +527,166 @@ class TestLazyEvaluation(TestCase):
         _ = service.db
         self.assertEqual(get_instantiation_count("Database"), 1)
 
+    def test_lazy_builtin_fields_remain_plain_params(self):
+        """Builtin-typed fields (int, str) are NOT wrapped with Lazy — they stay as init params."""
+
+        class Database:
+            pass
+
+        self.container.register(Database)
+
+        injected = Injected(self.container)
+
+        @injected(evaluation_strategy=EvaluationStrategy.LAZY)
+        class Service:
+            db: Database
+            name: str
+            port: int = 8080
+
+        svc = Service(name="svc", port=9090)
+        self.assertEqual(svc.name, "svc")
+        self.assertEqual(svc.port, 9090)
+        # db is lazy-injected
+        self.assertIsInstance(svc.db, Database)
+
+    def test_lazy_generic_fields_remain_plain_params(self):
+        """Generic-typed fields (list[], dict[]) are NOT wrapped with Lazy."""
+
+        class Database:
+            pass
+
+        self.container.register(Database)
+
+        injected = Injected(self.container)
+
+        @injected(evaluation_strategy=EvaluationStrategy.LAZY)
+        class Service:
+            db: Database
+            tags: list = None
+            meta: dict = None
+
+        svc = Service(tags=["a"], meta={"k": 1})
+        self.assertEqual(svc.tags, ["a"])
+        self.assertEqual(svc.meta, {"k": 1})
+        self.assertIsInstance(svc.db, Database)
+
+    def test_lazy_builtin_subclass_injection(self):
+        """Subclasses of builtins are still wrapped with Lazy and injected."""
+
+        class MyStr(str):
+            pass
+
+        self.container.register(MyStr, lambda: MyStr("injected"))
+
+        injected = Injected(self.container)
+
+        @injected(evaluation_strategy=EvaluationStrategy.LAZY)
+        class Service:
+            label: MyStr
+
+        svc = Service()
+        self.assertIsInstance(svc.label, MyStr)
+        self.assertEqual(svc.label, "injected")
+
+    def test_optional_lazy_builtin_fields_remain_plain_params(self):
+        """Builtin-typed fields are NOT wrapped with OptionalLazy."""
+
+        class Database:
+            pass
+
+        self.container.register(Database)
+
+        injected = Injected(self.container)
+
+        @injected(evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY)
+        class Service:
+            db: Database
+            name: str
+            count: int = 0
+
+        svc = Service(name="svc")
+        self.assertEqual(svc.name, "svc")
+        self.assertEqual(svc.count, 0)
+        self.assertIsInstance(svc.db, Database)
+
+    def test_optional_lazy_builtin_subclass_injection(self):
+        """Subclasses of builtins are still wrapped with OptionalLazy and injected."""
+
+        class MyInt(int):
+            pass
+
+        self.container.register(MyInt, lambda: MyInt(7))
+
+        injected = Injected(self.container)
+
+        @injected(evaluation_strategy=EvaluationStrategy.OPTIONAL_LAZY)
+        class Service:
+            value: MyInt
+
+        svc = Service()
+        self.assertIsInstance(svc.value, MyInt)
+        self.assertEqual(svc.value, 7)
+
+    def test_eager_builtin_fields_remain_plain_params(self):
+        """Builtin-typed fields (int, str) are NOT injected eagerly — they stay as init params."""
+
+        class Database:
+            pass
+
+        self.container.register(Database)
+
+        injected = Injected(self.container)
+
+        @injected(evaluation_strategy=EvaluationStrategy.EAGER)
+        class Service:
+            db: Database
+            name: str
+            port: int = 8080
+
+        svc = Service(name="svc", port=9090)
+        self.assertEqual(svc.name, "svc")
+        self.assertEqual(svc.port, 9090)
+        self.assertIsInstance(svc.db, Database)
+
+    def test_eager_generic_fields_remain_plain_params(self):
+        """Generic-typed fields (list[], dict[]) are NOT injected eagerly."""
+
+        class Database:
+            pass
+
+        self.container.register(Database)
+
+        injected = Injected(self.container)
+
+        @injected(evaluation_strategy=EvaluationStrategy.EAGER)
+        class Service:
+            db: Database
+            tags: list = None
+            meta: dict = None
+
+        svc = Service(tags=["a"], meta={"k": 1})
+        self.assertEqual(svc.tags, ["a"])
+        self.assertEqual(svc.meta, {"k": 1})
+        self.assertIsInstance(svc.db, Database)
+
+    def test_eager_builtin_subclass_injection(self):
+        """Subclasses of builtins are still eagerly injected."""
+
+        class MyStr(str):
+            pass
+
+        self.container.register(MyStr, lambda: MyStr("injected"))
+
+        injected = Injected(self.container)
+
+        @injected(evaluation_strategy=EvaluationStrategy.EAGER)
+        class Service:
+            label: MyStr
+
+        svc = Service()
+        self.assertIsInstance(svc.label, MyStr)
+        self.assertEqual(svc.label, "injected")
+
 
 # Helper functions for tracking instantiation
 instantiation_counter = {}

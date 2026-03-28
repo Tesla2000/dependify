@@ -1,6 +1,6 @@
 [project]
 name = "dependify"
-version = "3.0.6"
+version = "4.0.0"
 authors = [
   { name="Kenneth Ulloa", email="ulloakenth@gmail.com" },
 ]

@@ -1,12 +1,8 @@
 from abc import ABC
-from typing import Annotated
 from typing import Any
 from typing import Dict
-from typing import get_args
-from typing import get_origin
 from typing import Type
 from typing import TypeVar
-from typing import Union
 
 from dependify._conditional_result import ConditionalResult
 from dependify._dependency_injection_container import (
@@ -19,6 +15,7 @@ from pydantic import model_validator
 from pydantic import ModelWrapValidatorHandler
 from typing_extensions import Self
 
+from ._is_injectable_field_type import is_injectable_field_type
 from ._markers import Excluded
 from ._protocol_translator import (
     translate_protocol,
@@ -26,29 +23,6 @@ from ._protocol_translator import (
 from ._validate_arg import validate_arg
 
 ClassType = TypeVar("ClassType", bound=BaseModel)
-
-
-def _is_injectable_field_type(annotation: Any) -> bool:
-    """Return True if the annotation is a custom type suitable for injection.
-
-    Excludes builtin types (int, str, bool, etc.) and collection generics
-    (list[], dict[], Literal[], etc.), but recurses into Union/Optional so
-    that ``Optional[CustomType]`` is still treated as injectable.  Subclasses
-    of builtins (e.g. ``class Integer(int)``) are also included.
-    """
-    origin = get_origin(annotation)
-    if origin is Annotated:
-        args = get_args(annotation)
-        return _is_injectable_field_type(args[0]) if args else False
-    if origin is Union:
-        return any(
-            _is_injectable_field_type(arg) for arg in get_args(annotation)
-        )
-    if origin is not None:
-        return False
-    if not isinstance(annotation, type):
-        return False
-    return annotation.__module__ != "builtins"
 
 
 def create_pydantic_wrap_validator(
@@ -121,7 +95,7 @@ def create_pydantic_wrap_validator(
         field_name
         for field_name, field_info in class_.model_fields.items()
         if Excluded not in (field_info.metadata or ())
-        and _is_injectable_field_type(field_info.annotation)
+        and is_injectable_field_type(field_info.annotation)
     )
     _base_meta = type(class_)
 

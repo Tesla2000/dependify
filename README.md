@@ -9,6 +9,7 @@ A powerful and flexible dependency injection framework for Python that makes man
 - [The @wired Decorator](#the-wired-decorator)
   - [Basic Usage](#basic-usage)
   - [Dependency Injection](#dependency-injection)
+  - [Injectable Types](#injectable-types)
   - [Caching (Singleton Pattern)](#caching-singleton-pattern)
   - [Patching Dependencies](#patching-dependencies)
   - [Custom Registries](#custom-registries)
@@ -167,6 +168,56 @@ class Orchestrator:
 
 orchestrator = Orchestrator()
 print(orchestrator.combine())  # Output: A-B-C
+```
+
+### Injectable Types
+
+Dependify only injects fields whose type annotation is a **custom class** — it intentionally skips built-in primitives and generic collection / special-form types, which must always be provided explicitly by the caller.
+
+| Annotation | Injectable? | Reason |
+|---|---|---|
+| Custom class (`Logger`, `Database`, …) | Yes | Registered in the container |
+| `Optional[CustomType]` | Yes | Union contains a custom type |
+| `Union[Dog, Cat]` | Yes | Union contains custom types |
+| `Annotated[CustomType, …]` | Yes | Unwrapped to the inner custom type |
+| **Subclass of builtin** (`class MyStr(str)`) | **Yes** | Defined in user code, not `builtins` |
+| `int`, `str`, `bool`, `float`, … | No | Built-in primitive |
+| `list[…]`, `dict[…]`, `tuple[…]`, … | No | Generic collection |
+| `Literal["x"]` | No | Special form |
+| `Optional[str]` | No | Union of only builtins |
+
+This rule applies uniformly across all evaluation strategies (`EAGER`, `LAZY`, `OPTIONAL_LAZY`) and both plain classes and pydantic `BaseModel` subclasses.
+
+```python
+@wired
+class Logger:
+    def log(self, msg: str): ...
+
+@wired
+class ApiService:
+    logger: Logger      # Injected — custom class
+    api_key: str        # NOT injected — builtin str, must be passed by caller
+    retries: int = 3    # NOT injected — builtin int, uses default
+    tags: list = None   # NOT injected — generic collection
+
+service = ApiService(api_key="secret123")  # only non-injectable fields are required
+```
+
+Subclasses of built-in types are treated as custom types and **are** injectable:
+
+```python
+class Url(str):
+    """A validated URL string."""
+    pass
+
+container.register(Url, lambda: Url("https://api.example.com"))
+
+@wired
+class Client:
+    url: Url   # Injected — Url is a user-defined subclass of str
+
+client = Client()
+print(client.url)  # https://api.example.com
 ```
 
 ### Caching (Singleton Pattern)
@@ -1102,6 +1153,7 @@ class ResilientService:
 3. **Keep critical dependencies EAGER**: Configuration, logging, essential services
 4. **Profile before optimizing**: Measure which dependencies benefit most from lazy loading
 5. **Document lazy dependencies**: Make it clear which dependencies are lazy and why
+6. **Builtin and generic fields are never lazified**: `str`, `int`, `list[…]`, etc. are always kept as plain constructor parameters regardless of the evaluation strategy — see [Injectable Types](#injectable-types).
 
 ### Excluding Fields from __init__
 
@@ -2454,6 +2506,7 @@ container.remove(Config)  # Same as container.remove(Config, NO_TARGET)
 9. **Type annotate all dependencies** for better IDE support and validation
 10. **Use `remove()` with context managers for testing** - Remove and replace dependencies in isolated contexts to avoid affecting global state
 11. **Prefer context managers over direct removal** - When testing, use context managers to ensure dependencies are restored automatically
+12. **Only custom types are injectable** - Builtins (`int`, `str`, …), generic collections (`list[…]`, `dict[…]`), and `Literal` types are never injected; always pass them explicitly. Subclasses of builtins (e.g. `class Url(str)`) are treated as custom types and are injectable — see [Injectable Types](#injectable-types)
 
 ## License
 
